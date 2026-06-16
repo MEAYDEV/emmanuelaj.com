@@ -35,8 +35,8 @@ if (navToggle && navLinks) {
 // ============ Beats player ============
 const beats = [];
 const cats = [
-  { code: "Afro", genre: "Afrobeats", dir: "afro", n: 8 },
-  { code: "Trap", genre: "Trap", dir: "trap", n: 6 },
+  { code: "Afro", genre: "Afrobeats", dir: "afro", n: 9 },
+  { code: "Trap", genre: "Trap", dir: "trap", n: 3 },
   { code: "Ama", genre: "Amapiano", dir: "amapiano", n: 4 },
 ];
 cats.forEach((c) => {
