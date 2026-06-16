@@ -35,18 +35,20 @@ if (navToggle && navLinks) {
 // ============ Beats player ============
 const beats = [];
 const cats = [
-  { code: "Afro", genre: "Afrobeats", dir: "afro", n: 9 },
+  { code: "Misc", genre: "Miscellaneous", dir: "misc", n: 1, ext: "wav" },
+  { code: "Afro", genre: "Afrobeats", dir: "afro", n: 10 },
   { code: "Trap", genre: "Trap", dir: "trap", n: 3 },
   { code: "Ama", genre: "Amapiano", dir: "amapiano", n: 4 },
 ];
 cats.forEach((c) => {
+  const ext = c.ext || "mp3";
   for (let i = 1; i <= c.n; i++) {
     const nn = String(i).padStart(2, "0");
     beats.push({
       id: `${c.dir}-${nn}`,
       title: `${c.code} ${nn}`,
       genre: c.genre,
-      src: `beats/${c.dir}/${nn}.mp3`,
+      src: `beats/${c.dir}/${nn}.${ext}`,
     });
   }
 });
