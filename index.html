@@ -15,9 +15,14 @@
 
   <nav class="nav">
     <a href="#top" class="nav-name">Emmanuel Ajala</a>
-    <div class="nav-links">
+    <button class="nav-toggle" id="nav-toggle" aria-label="Menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="nav-links">
       <a href="#apps">Apps</a>
       <a href="#projects">Projects</a>
+      <a href="#beats">Beats</a>
+      <a href="#writing">Writing</a>
       <a href="#about">About</a>
       <a href="#contact" class="nav-cta">Say hello</a>
     </div>
@@ -29,7 +34,7 @@
     <p class="hero-sub reveal">
       I'm Emmanuel Ajala. I make mobile apps, work with AI, and enjoy turning
       half-formed ideas into things people open every day. Off the screen it's
-      futbol, piano at church, volunteering, and a healthy amount of video games.
+      futbol, piano, the gym, and making beats.
     </p>
     <div class="hero-actions reveal">
       <a class="btn btn-primary" href="#apps">See my apps</a>
@@ -123,6 +128,54 @@
       </p>
     </section>
 
+    <section id="beats" class="section">
+      <div class="section-head reveal">
+        <svg class="squiggle" viewBox="0 0 56 12" aria-hidden="true"><path d="M2 8c6-8 10-8 16 0s10 8 16 0 10-8 20 0" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <p class="kicker">In the studio</p>
+        <h2>Beats I've <em>made.</em></h2>
+        <p class="section-intro">
+          When I want to create something just for the feel of it, I make beats.
+          Mostly afrobeats, with some trap and amapiano in the mix. Press play.
+        </p>
+      </div>
+
+      <div class="beat-filters reveal" id="beat-filters">
+        <button class="beat-filter is-active" data-genre="all">All</button>
+        <button class="beat-filter" data-genre="Afrobeats">Afrobeats</button>
+        <button class="beat-filter" data-genre="Trap">Trap</button>
+        <button class="beat-filter" data-genre="Amapiano">Amapiano</button>
+      </div>
+
+      <div class="beat-list reveal" id="beat-list"></div>
+    </section>
+
+    <section id="writing" class="section">
+      <div class="section-head reveal">
+        <svg class="squiggle" viewBox="0 0 56 12" aria-hidden="true"><path d="M2 8c6-8 10-8 16 0s10 8 16 0 10-8 20 0" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <p class="kicker">Writing</p>
+        <h2>Things I've <em>written.</em></h2>
+        <p class="section-intro">
+          A couple of pieces I put on Medium, mostly where machine learning
+          meets the math underneath it.
+        </p>
+      </div>
+
+      <div class="writing-list">
+        <a class="writing-row reveal" href="https://medium.com/@emmanuelajala22/image-denoising-with-singular-value-decomposition-svd-8f5dda3cc259" target="_blank" rel="noopener">
+          <div class="writing-meta">Jul 2025 · 10 min read</div>
+          <h3>Image Denoising with Singular Value Decomposition (SVD)</h3>
+          <p>How SVD breaks an image down into its underlying structure, and how that lets you strip away noise while keeping the detail that actually matters.</p>
+          <span class="writing-link">Read on Medium</span>
+        </a>
+        <a class="writing-row reveal" href="https://medium.com/@emmanuelajala22/machine-learning-models-that-remember-too-much-a-review-138152971447" target="_blank" rel="noopener">
+          <div class="writing-meta">Apr 2025 · 2 min read</div>
+          <h3>Machine Learning Models That Remember Too Much</h3>
+          <p>A short review of how sensitive training data can leak out of large models through clever queries, and what we can do to keep it private.</p>
+          <span class="writing-link">Read on Medium</span>
+        </a>
+      </div>
+    </section>
+
     <section id="about" class="section">
       <div class="section-head reveal">
         <svg class="squiggle" viewBox="0 0 56 12" aria-hidden="true"><path d="M2 8c6-8 10-8 16 0s10 8 16 0 10-8 20 0" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
@@ -133,20 +186,21 @@
       <div class="about-grid">
         <div class="about-text reveal">
           <p>
-            I started out studying Mechatronics Engineering in Nigeria, then
-            moved to the US for a Masters in Computer Science at the University
-            of Alabama at Birmingham. Along the way I've built computer vision
-            features for wildlife cameras, data pipelines for research, and a
-            couple of apps you can download right now.
+            I studied Mechatronics Engineering in Nigeria before moving to the
+            US for my Master's in Computer Science at the University of Alabama
+            at Birmingham. Since then, I've built things across software, AI,
+            research, and a few apps people can use today.
           </p>
           <p>
-            Most of my recent work lives somewhere around AI: computer vision,
-            LLMs, agents, and figuring out how to turn all of it into things
-            regular people enjoy using.
+            More than anything, I just enjoy creating: hardware projects,
+            software, AI experiments, making beats (mostly afrobeats), whatever
+            turns an idea into something real. Lately my work has focused on
+            computer vision, LLMs, and building products people actually enjoy
+            using.
           </p>
           <p>
-            The rest of my time goes to the simple stuff. A good match, a good
-            song, a good game.
+            When I'm not building, I'm usually playing piano, on the soccer
+            field, in the gym, hanging out, or listening to music.
           </p>
         </div>
         <div class="about-cards">
@@ -165,10 +219,10 @@
             </div>
           </div>
           <div class="hobby-card reveal">
-            <span class="hobby-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 7h11a4.5 4.5 0 0 1 4.4 5.4l-.8 4a2.6 2.6 0 0 1-4.5 1.2L14.8 15H9.2l-1.8 2.6a2.6 2.6 0 0 1-4.5-1.2l-.8-4A4.5 4.5 0 0 1 6.5 7z"/><path d="M8 10v3M6.5 11.5h3"/><circle cx="16" cy="10.5" r="0.4"/><circle cx="18.5" cy="12.5" r="0.4"/></svg></span>
+            <span class="hobby-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M4 8.5v7M17.5 6.5v11M20 8.5v7M6.5 12h11"/></svg></span>
             <div>
-              <h3>Games</h3>
-              <p>Building apps by day, respawning by night.</p>
+              <h3>Gym</h3>
+              <p>A few mornings a week. Good for the body, better for clearing my head.</p>
             </div>
           </div>
           <div class="hobby-card reveal">
@@ -203,6 +257,7 @@
       <div class="footer-links">
         <a href="https://github.com/Ajalaemmanuel" target="_blank" rel="noopener">GitHub</a>
         <a href="https://linkedin.com/in/emmanuelajalaa" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://medium.com/@emmanuelajala22" target="_blank" rel="noopener">Medium</a>
         <a href="https://whispae.com" target="_blank" rel="noopener">Whispae</a>
         <a href="https://furtone.app" target="_blank" rel="noopener">Furtone</a>
       </div>
