@@ -4,8 +4,12 @@ Personal website for Emmanuel Ajala. Plain HTML, CSS, and a little JavaScript. N
 
 ## Files
 - `index.html` — all the content
-- `styles.css` — design (light and dark themes via CSS variables)
-- `script.js` — theme toggle, scroll reveal, footer year
+- `styles.css` — layout, hero, and section styling
+- `script.js` — scroll reveal, hero effects, beats player
+- `assets/images/hero-portrait.png` — hero portrait (replace with your own file if you prefer)
+
+### Animated hero (optional)
+To use a looping portrait from [Higgsfield AI](https://higgsfield.ai/) or [open-generative-ai](https://github.com/anil-matcha/open-generative-ai), export a short `.webm` or `.mp4` and add a `<video>` inside `.portrait-frame` in `index.html` (poster=`hero-portrait.png`).
 
 ## Run locally
 Open `index.html` in a browser, or:

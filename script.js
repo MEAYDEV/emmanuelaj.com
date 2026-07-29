@@ -1,7 +1,7 @@
 // Footer year
 document.getElementById("year").textContent = new Date().getFullYear();
 
-// Scroll reveal
+// Scroll reveal (ghosty blur — inspired by arlan.me/vault/ghosty-reveal)
 const observer = new IntersectionObserver(
   (entries) => {
     for (const entry of entries) {
@@ -11,10 +11,23 @@ const observer = new IntersectionObserver(
       }
     }
   },
-  { threshold: 0.12 }
+  { threshold: 0.1, rootMargin: "0px 0px -40px 0px" }
 );
 
 document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
+
+// Nav: transparent on hero, solid after scroll
+const nav = document.getElementById("nav");
+const heroStage = document.querySelector(".hero-stage");
+
+const syncNav = () => {
+  if (!nav || !heroStage) return;
+  const threshold = heroStage.offsetHeight - nav.offsetHeight - 40;
+  nav.classList.toggle("is-solid", window.scrollY > threshold);
+};
+
+syncNav();
+window.addEventListener("scroll", syncNav, { passive: true });
 
 // Mobile nav toggle
 const navToggle = document.getElementById("nav-toggle");
@@ -30,6 +43,120 @@ if (navToggle && navLinks) {
       navToggle.setAttribute("aria-expanded", "false");
     })
   );
+}
+
+// Kinetic typography (arlan.me/vault/kinetic-typography)
+document.querySelectorAll("[data-kinetic]").forEach((line) => {
+  const text = line.textContent.trim();
+  line.textContent = "";
+  [...text].forEach((char, i) => {
+    const span = document.createElement("span");
+    span.dataset.char = char;
+    span.textContent = char === " " ? "\u00a0" : char;
+    span.style.transitionDelay = `${i * 18}ms`;
+    line.appendChild(span);
+
+    span.addEventListener("pointerenter", () => {
+      span.style.transform = "translateY(-0.18em) rotate(-3deg) scale(1.08)";
+    });
+    span.addEventListener("pointerleave", () => {
+      span.style.transform = "";
+    });
+  });
+});
+
+// Portrait parallax + chroma glow follow (vault chroma-glow)
+const heroPortrait = document.getElementById("hero-portrait");
+const portraitGlow = document.querySelector(".portrait-glow");
+const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+if (heroPortrait && portraitGlow && !prefersReduced) {
+  heroPortrait.addEventListener("pointermove", (e) => {
+    const rect = heroPortrait.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    portraitGlow.style.transform = `translate(${x * 24}px, ${y * 18}px)`;
+    const img = heroPortrait.querySelector(".portrait-frame img");
+    if (img) {
+      img.style.transform = `scale(1.02) rotateY(${x * 5}deg) rotateX(${-y * 4}deg)`;
+    }
+  });
+
+  heroPortrait.addEventListener("pointerleave", () => {
+    portraitGlow.style.transform = "";
+    const img = heroPortrait.querySelector(".portrait-frame img");
+    if (img) img.style.transform = "scale(1.02)";
+  });
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      const y = window.scrollY;
+      const shift = Math.min(y * 0.06, 36);
+      heroPortrait.style.setProperty("--scroll-y", `${shift}px`);
+    },
+    { passive: true }
+  );
+}
+
+// Bloom canvas — happyrain.studio-inspired ambient motion
+const bloomCanvas = document.getElementById("bloom-canvas");
+if (bloomCanvas && !prefersReduced) {
+  const ctx = bloomCanvas.getContext("2d");
+  let w = 0;
+  let h = 0;
+  const blooms = [];
+
+  const resize = () => {
+    w = bloomCanvas.width = bloomCanvas.offsetWidth * devicePixelRatio;
+    h = bloomCanvas.height = bloomCanvas.offsetHeight * devicePixelRatio;
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  };
+
+  const seed = () => {
+    blooms.length = 0;
+    const count = Math.min(18, Math.floor(bloomCanvas.offsetWidth / 70));
+    for (let i = 0; i < count; i++) {
+      blooms.push({
+        x: Math.random() * bloomCanvas.offsetWidth,
+        y: Math.random() * bloomCanvas.offsetHeight,
+        r: 40 + Math.random() * 90,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: (Math.random() - 0.5) * 0.2,
+        hue: 150 + Math.random() * 80,
+      });
+    }
+  };
+
+  const draw = () => {
+    if (!ctx) return;
+    ctx.clearRect(0, 0, bloomCanvas.offsetWidth, bloomCanvas.offsetHeight);
+    for (const b of blooms) {
+      b.x += b.vx;
+      b.y += b.vy;
+      if (b.x < -b.r) b.x = bloomCanvas.offsetWidth + b.r;
+      if (b.x > bloomCanvas.offsetWidth + b.r) b.x = -b.r;
+      if (b.y < -b.r) b.y = bloomCanvas.offsetHeight + b.r;
+      if (b.y > bloomCanvas.offsetHeight + b.r) b.y = -b.r;
+
+      const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
+      g.addColorStop(0, `hsla(${b.hue}, 45%, 55%, 0.14)`);
+      g.addColorStop(1, "hsla(0, 0%, 0%, 0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  };
+
+  resize();
+  seed();
+  draw();
+  window.addEventListener("resize", () => {
+    resize();
+    seed();
+  });
 }
 
 // ============ Beats player ============
@@ -66,7 +193,6 @@ if (beatList) {
     return `${m}:${String(s).padStart(2, "0")}`;
   };
 
-  // Deterministic pseudo-random so each waveform looks unique but stable
   const rand = (i) => {
     const x = Math.sin(i * 99.13 + 17.7) * 43758.5453;
     return x - Math.floor(x);
@@ -83,7 +209,6 @@ if (beatList) {
   const playIcon = `<svg class="ic-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>`;
   const pauseIcon = `<svg class="ic-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>`;
 
-  // Build rows
   beats.forEach((b, idx) => {
     const bars = waveBars(idx + 1);
     const row = document.createElement("div");
@@ -102,7 +227,6 @@ if (beatList) {
       <span class="beat-time">--:--</span>`;
     beatList.appendChild(row);
 
-    // Read duration without committing the main player
     const meta = new Audio();
     meta.preload = "metadata";
     meta.src = b.src;
@@ -184,7 +308,6 @@ if (beatList) {
     currentId = null;
   });
 
-  // Genre filters
   const filters = document.getElementById("beat-filters");
   if (filters) {
     filters.addEventListener("click", (e) => {
