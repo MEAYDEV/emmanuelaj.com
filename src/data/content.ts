@@ -16,7 +16,7 @@ export interface Interactable {
   position: [number, number, number];
   radius: number;
   dialogue?: DialogueContent;
-  action?: "vinyl";
+  action?: "library" | "vinyl" | "photos";
 }
 
 export const INTERACTABLES: Interactable[] = [
@@ -43,28 +43,21 @@ export const INTERACTABLES: Interactable[] = [
     label: "Browse the library",
     position: [5.6, 0, -4.2],
     radius: 2.4,
-    dialogue: {
-      title: "The library",
-      lines: [
-        "Books I've read or I'm reading. The full 3D shelf is being carpentered — soon you'll pull books out one by one.",
-        "On rotation lately: The Psychology of Money, Deep Work, and Zero to One.",
-      ],
-      links: [
-        {
-          label: "The Psychology of Money",
-          url: "https://www.amazon.com/dp/0857197681",
-        },
-        { label: "Deep Work", url: "https://www.amazon.com/dp/1455586692" },
-        { label: "Zero to One", url: "https://www.amazon.com/dp/0804139296" },
-      ],
-    },
+    action: "library",
   },
   {
     id: "vinyl",
-    label: "Spin a record",
+    label: "Dig through the crate",
     position: [5.6, 0, 1.6],
     radius: 2.2,
     action: "vinyl",
+  },
+  {
+    id: "photobook",
+    label: "Flip the photo book",
+    position: [2.9, 3.4, -5.0],
+    radius: 1.9,
+    action: "photos",
   },
   {
     id: "desk",

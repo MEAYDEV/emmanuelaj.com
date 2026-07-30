@@ -1,8 +1,10 @@
 import { create } from "zustand";
 import * as THREE from "three";
+import type { Book } from "./data/library";
 
 export type Phase = "arrival" | "inside";
 export type ArrivalStep = "hello" | "greeting" | "enter";
+export type Focus = "library" | "vinyl" | "photos" | null;
 
 export interface DialogueContent {
   title: string;
@@ -29,6 +31,10 @@ interface GameState {
   nearId: string | null;
   nowPlaying: NowPlaying | null;
   wavePulse: number;
+  /** zoomed-in interaction mode (library shelf, vinyl crate, photo book) */
+  focus: Focus;
+  selectedBook: Book | null;
+  vinylIndex: number;
 
   setPhase: (p: Phase) => void;
   setArrivalStep: (s: ArrivalStep) => void;
@@ -38,6 +44,9 @@ interface GameState {
   setNearId: (id: string | null) => void;
   setNowPlaying: (b: NowPlaying | null) => void;
   triggerWave: () => void;
+  setFocus: (f: Focus) => void;
+  setSelectedBook: (b: Book | null) => void;
+  setVinylIndex: (i: number) => void;
 }
 
 export const useGame = create<GameState>((set) => ({
@@ -48,6 +57,9 @@ export const useGame = create<GameState>((set) => ({
   nearId: null,
   nowPlaying: null,
   wavePulse: 0,
+  focus: null,
+  selectedBook: null,
+  vinylIndex: 0,
 
   setPhase: (phase) => set({ phase }),
   setArrivalStep: (arrivalStep) => set({ arrivalStep }),
@@ -57,6 +69,9 @@ export const useGame = create<GameState>((set) => ({
   setNearId: (nearId) => set({ nearId }),
   setNowPlaying: (nowPlaying) => set({ nowPlaying }),
   triggerWave: () => set((s) => ({ wavePulse: s.wavePulse + 1 })),
+  setFocus: (focus) => set({ focus, selectedBook: null }),
+  setSelectedBook: (selectedBook) => set({ selectedBook }),
+  setVinylIndex: (vinylIndex) => set({ vinylIndex }),
 }));
 
 /* ---------- beats audio (module singleton) ---------- */
@@ -90,13 +105,17 @@ export const BEATS: Beat[] = beatCats.flatMap((c) =>
 const audio = typeof Audio !== "undefined" ? new Audio() : null;
 let beatIndex = -1;
 
-export function spinNextBeat() {
+export function playBeat(beat: Beat) {
   if (!audio) return;
-  beatIndex = (beatIndex + 1) % BEATS.length;
-  const beat = BEATS[beatIndex];
+  beatIndex = BEATS.indexOf(beat);
   audio.src = beat.src;
   audio.play().catch(() => {});
   useGame.getState().setNowPlaying(beat);
+}
+
+export function spinNextBeat() {
+  beatIndex = (beatIndex + 1) % BEATS.length;
+  playBeat(BEATS[beatIndex]);
 }
 
 export function stopBeat() {

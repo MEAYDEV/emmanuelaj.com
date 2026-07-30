@@ -31,7 +31,8 @@ export default function Player() {
       const action = KEYMAP[e.code];
       if (!action) return;
       e.preventDefault();
-      if (useGame.getState().dialogue) return;
+      const g = useGame.getState();
+      if (g.dialogue || g.focus) return;
       ecctrl.current?.setMovement({ [action]: true });
     };
     const up = (e: KeyboardEvent) => {
@@ -53,8 +54,8 @@ export default function Player() {
 
     const g = useGame.getState();
 
-    // freeze while a dialogue is open
-    if (g.dialogue) {
+    // freeze while a dialogue or focus mode is open
+    if (g.dialogue || g.focus) {
       handle.setMovement({
         forward: false,
         backward: false,
@@ -89,6 +90,7 @@ export default function Player() {
       (window as unknown as Record<string, unknown>).__playerDebug = {
         pos: [handle.currPos.x, handle.currPos.y, handle.currPos.z],
         vel: [v.x, v.y, v.z],
+        input: { ...handle.input },
       };
     }
 
@@ -119,6 +121,8 @@ export default function Player() {
       maxWalkVel={2.6}
       maxRunVel={5}
       enableToggleRun={false}
+      accDeltaTime={0.15}
+      decDeltaTime={0.08}
       springK={60}
       dampingC={10}
     >

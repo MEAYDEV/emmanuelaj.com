@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { useGame, spinNextBeat } from "../store";
+import { useGame } from "../store";
 import { INTERACTABLES, INTRO_DIALOGUE } from "../data/content";
 
 interface Prompt {
@@ -13,8 +13,9 @@ export function useCurrentPrompt(): Prompt | null {
   const arrivalStep = useGame((s) => s.arrivalStep);
   const dialogue = useGame((s) => s.dialogue);
   const nearId = useGame((s) => s.nearId);
+  const focus = useGame((s) => s.focus);
 
-  if (dialogue) return null;
+  if (dialogue || focus) return null;
 
   if (phase === "arrival") {
     if (arrivalStep === "hello") {
@@ -51,10 +52,15 @@ export function useCurrentPrompt(): Prompt | null {
     key: "X",
     label: item.label,
     run: () => {
-      if (item.action === "vinyl") {
-        spinNextBeat();
+      const g = useGame.getState();
+      if (item.action === "library") {
+        g.setFocus("library");
+      } else if (item.action === "vinyl") {
+        g.setFocus("vinyl");
+      } else if (item.action === "photos") {
+        g.setFocus("photos");
       } else if (item.dialogue) {
-        useGame.getState().openDialogue(item.dialogue);
+        g.openDialogue(item.dialogue);
       }
     },
   };

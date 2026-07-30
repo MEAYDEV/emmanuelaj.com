@@ -6,12 +6,21 @@ import * as THREE from "three";
 import Loft from "./Loft";
 import Player from "./Player";
 import Avatar from "./Avatar";
+import LibraryBooks from "./LibraryBooks";
+import VinylBrowser from "./VinylBrowser";
 import { playerPosRef, useGame } from "../store";
 import { INTERACTABLES } from "../data/content";
+
+const FOCUS_CAMS = {
+  library: { pos: [4.55, 1.85, -4.2], tgt: [6.7, 1.5, -4.2] },
+  vinyl: { pos: [4.35, 1.6, 2.75], tgt: [6.1, 1.35, 2.75] },
+  photos: { pos: [3.4, 4.9, -3.2], tgt: [2.9, 3.7, -5.3] },
+} as const;
 
 function CameraRig() {
   const controls = useRef<CameraControls>(null);
   const phase = useGame((s) => s.phase);
+  const focus = useGame((s) => s.focus);
 
   useEffect(() => {
     const c = controls.current;
@@ -20,14 +29,23 @@ function CameraRig() {
     if (phase === "arrival") {
       c.enabled = false;
       c.setLookAt(0.3, 2.1, 11.6, 0.75, 1.35, 6.7, false);
-    } else {
-      c.enabled = true;
-      c.setLookAt(0, 2.7, 5.8, 0, 1.5, 3.0, true);
+      return;
     }
-  }, [phase]);
+    if (focus) {
+      const cam = FOCUS_CAMS[focus];
+      c.enabled = false;
+      c.setLookAt(cam.pos[0], cam.pos[1], cam.pos[2], cam.tgt[0], cam.tgt[1], cam.tgt[2], true);
+      return;
+    }
+    // back to third-person follow
+    const p = playerPosRef.current;
+    c.enabled = true;
+    c.setLookAt(p.x, p.y + 1.7, p.z + 2.9, p.x, p.y + 0.6, p.z, true);
+  }, [phase, focus]);
 
   useFrame(() => {
-    if (useGame.getState().phase !== "inside") return;
+    const g = useGame.getState();
+    if (g.phase !== "inside" || g.focus) return;
     const p = playerPosRef.current;
     controls.current?.moveTo(p.x, p.y + 0.6, p.z, true);
   });
@@ -55,6 +73,7 @@ function ArrivalGreeter() {
 function InteractableMarkers() {
   const ref = useRef<THREE.Group>(null);
   const phase = useGame((s) => s.phase);
+  const focus = useGame((s) => s.focus);
 
   useFrame((state) => {
     if (!ref.current) return;
@@ -71,7 +90,7 @@ function InteractableMarkers() {
     });
   });
 
-  if (phase !== "inside") return null;
+  if (phase !== "inside" || focus) return null;
 
   return (
     <group ref={ref}>
@@ -167,6 +186,8 @@ export default function Experience() {
       <pointLight position={[5.9, 2.3, 4.9]} intensity={14} distance={7} color="#ffb45c" />
       <pointLight position={[4.6, 4.6, -3.6]} intensity={12} distance={7} color="#ffcf8a" />
       <pointLight position={[5.4, 2.4, -0.6]} intensity={10} distance={6} color="#ffb45c" />
+      {/* library nook light under the mezzanine */}
+      <pointLight position={[5.2, 2.5, -4.2]} intensity={9} distance={5} color="#ffcf8a" />
       {/* porch light */}
       <pointLight position={[0, 3.0, 7.2]} intensity={16} distance={8} color="#ffb45c" />
 
@@ -175,6 +196,8 @@ export default function Experience() {
         {phase === "inside" ? <Player /> : <ArrivalGreeter />}
       </Physics>
 
+      <LibraryBooks />
+      <VinylBrowser />
       <InteractableMarkers />
       <CityBackdrop />
       <CameraRig />

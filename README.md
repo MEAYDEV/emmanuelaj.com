@@ -39,10 +39,24 @@ Vercel auto-detects Vite. The classic site ships as static files inside
 - `W A S D` / arrows — walk · `Shift` — run · `Space` — jump
 - Drag — orbit camera · touch joystick on mobile
 
+## Content admin (Supabase)
+
+The photo book and the library book list are editable at `/admin`:
+
+1. Create a free [Supabase](https://supabase.com) project
+2. Run `docs/supabase-setup.sql` in the SQL editor
+3. Copy `.env.example` to `.env` and fill in your project URL + anon key
+   (set the same variables in Vercel for production)
+4. Add an admin user in Supabase → Authentication → Users
+5. Sign in at `/admin` to upload photos and manage books
+
+Without Supabase the loft falls back to the built-in book list and
+placeholder photos — everything still works.
+
 ## Roadmap (see docs/3d-portfolio-plan.md)
 
-1. ~~Walkable loft + door intro + interaction system~~ (this milestone)
-2. 3D pull-out library books (port of thebuggeddev/books)
-3. Vinyl crate flip-through with per-record sleeves
-4. Supabase admin page for photo book + content
+1. ~~Walkable loft + door intro + interaction system~~
+2. ~~3D pull-out library books~~
+3. ~~Vinyl crate flip-through with per-record sleeves~~
+4. ~~Supabase admin page for photo book + content~~
 5. Real loft GLB with baked lighting, Ready Player Me avatar

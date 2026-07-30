@@ -122,8 +122,12 @@ function Shell() {
       <Bx p={[-4.5, 0.5, -5.4]} s={[4.4, 1.0, 1.1]} c="#23262d" rough={0.7} />
       <Bx p={[-4.5, 1.03, -5.4]} s={[4.55, 0.07, 1.2]} c={CREAM} rough={0.4} />
 
-      {/* bookshelf under mezzanine, against right wall */}
-      <Bx p={[6.72, 1.5, -4.2]} s={[0.55, 3.0, 2.7]} c="#4e3a29" rough={0.85} />
+      {/* bookshelf under mezzanine, against right wall (open-front unit) */}
+      <Bx p={[6.88, 1.5, -4.2]} s={[0.18, 3.0, 2.7]} c="#4e3a29" rough={0.85} />
+      <Bx p={[6.66, 1.5, -2.88]} s={[0.5, 3.0, 0.09]} c="#4e3a29" rough={0.85} />
+      <Bx p={[6.66, 1.5, -5.52]} s={[0.5, 3.0, 0.09]} c="#4e3a29" rough={0.85} />
+      <Bx p={[6.66, 2.97, -4.2]} s={[0.5, 0.09, 2.73]} c="#4e3a29" rough={0.85} />
+      <Bx p={[6.66, 0.26, -4.2]} s={[0.5, 0.52, 2.73]} c="#3c2c1f" rough={0.85} />
 
       {/* vinyl stand + crate */}
       <Bx p={[6.55, 0.45, 1.6]} s={[0.75, 0.9, 1.5]} c={CHARCOAL} rough={0.7} />
@@ -235,7 +239,8 @@ function Decor() {
       {[0.55, 1.35, 2.15, 2.9].map((y) => (
         <Bx key={y} p={[6.6, y, -4.2]} s={[0.4, 0.05, 2.6]} c="#3c2c1f" rough={0.9} />
       ))}
-      {[0.55, 1.35, 2.15].map((rowY, row) =>
+      {/* decorative spines on top + bottom rows; middle row holds the real books */}
+      {[0.55, 2.15].map((rowY, row) =>
         Array.from({ length: 11 }, (_, i) => {
           const h = 0.3 + ((i * 7 + row * 3) % 4) * 0.035;
           return (
@@ -249,6 +254,9 @@ function Decor() {
           );
         })
       )}
+      {/* photo book on the mezzanine dresser */}
+      <Bx p={[2.9, 4.16, -5.5]} s={[0.34, 0.06, 0.26]} c="#7a3b2e" rough={0.8} />
+      <Bx p={[2.9, 4.2, -5.5]} s={[0.3, 0.025, 0.22]} c={CREAM} rough={0.9} />
 
       {/* desk decor: laptop */}
       <Bx p={[-6.45, 0.83, 3.4]} s={[0.34, 0.025, 0.5]} c="#9aa0a8" metal={0.6} rough={0.4} />

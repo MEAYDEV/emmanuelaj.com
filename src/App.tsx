@@ -6,6 +6,8 @@ import Hud from "./ui/Hud";
 import DialogueCard from "./ui/DialogueCard";
 import PromptChip from "./ui/PromptChip";
 import MobileControls from "./ui/MobileControls";
+import FocusPanels from "./ui/FocusPanels";
+import PhotoBook from "./ui/PhotoBook";
 
 export default function App() {
   return (
@@ -23,6 +25,8 @@ export default function App() {
       <Hud />
       <PromptChip />
       <DialogueCard />
+      <FocusPanels />
+      <PhotoBook />
       <MobileControls />
     </>
   );
