@@ -5,20 +5,20 @@ import { Vector2 } from "three";
 /** Filmic stack kept restrained so faces and materials stay readable. */
 export default function Effects() {
   return (
-    <EffectComposer multisampling={4} enableNormalPass={false}>
+    <EffectComposer multisampling={0} enableNormalPass={false}>
       <Bloom
         mipmapBlur
-        intensity={0.55}
-        luminanceThreshold={0.62}
-        luminanceSmoothing={0.3}
-        radius={0.7}
+        intensity={0.5}
+        luminanceThreshold={0.65}
+        luminanceSmoothing={0.32}
+        radius={0.65}
       />
-      <Vignette offset={0.24} darkness={0.55} eskil={false} />
+      <Vignette offset={0.26} darkness={0.5} eskil={false} />
       <ChromaticAberration
         blendFunction={BlendFunction.NORMAL}
-        offset={new Vector2(0.00035, 0.00035)}
+        offset={new Vector2(0.0003, 0.0003)}
         radialModulation
-        modulationOffset={0.4}
+        modulationOffset={0.45}
       />
     </EffectComposer>
   );

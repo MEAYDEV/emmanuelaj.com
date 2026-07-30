@@ -1,6 +1,5 @@
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
 import { Canvas } from "@react-three/fiber";
-import Experience from "./three/Experience";
 import LoadingScreen from "./ui/LoadingScreen";
 import Hud from "./ui/Hud";
 import DialogueCard from "./ui/DialogueCard";
@@ -11,14 +10,21 @@ import PhotoBook from "./ui/PhotoBook";
 import AudioManager from "./ui/AudioManager";
 import ArrivalTitle from "./ui/ArrivalTitle";
 
+const Experience = lazy(() => import("./three/Experience"));
+
 export default function App() {
   return (
     <>
       <Canvas
         shadows
         camera={{ position: [3.4, 3.1, 14.2], fov: 40 }}
-        dpr={[1, 1.75]}
-        gl={{ antialias: true, toneMappingExposure: 1.05 }}
+        dpr={[1, 1.5]}
+        gl={{
+          antialias: true,
+          powerPreference: "high-performance",
+          toneMappingExposure: 1.05,
+        }}
+        performance={{ min: 0.5 }}
       >
         <Suspense fallback={null}>
           <Experience />

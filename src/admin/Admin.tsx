@@ -1,91 +1,87 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Session, SupabaseClient } from "@supabase/supabase-js";
-import { getSupabase, supabaseConfigured } from "../lib/supabase";
-
-interface PhotoRow {
-  id: string;
-  storage_path: string;
-  caption: string | null;
-  sort: number;
-  url?: string;
-}
-
-interface BookRow {
-  id: string;
-  title: string;
-  author: string | null;
-  status: string | null;
-  notes: string | null;
-  buy_url: string | null;
-  color: string | null;
-  sort: number;
-}
+import {
+  createBook,
+  deleteBook,
+  deletePhoto,
+  fetchBooks,
+  fetchPhotos,
+  fetchSession,
+  login,
+  logout,
+  updateBook,
+  updatePhotoCaption,
+  uploadPhoto,
+  type BookRow,
+  type PhotoRow,
+  type SessionInfo,
+} from "../lib/admin-api";
 
 export default function Admin() {
-  const [client, setClient] = useState<SupabaseClient | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<SessionInfo | null>(null);
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    const supa = getSupabase();
-    if (!supa) {
+  const refresh = useCallback(async () => {
+    try {
+      const s = await fetchSession();
+      setSession(s);
+    } catch {
+      setSession({ authenticated: false, cmsReady: false, configured: false });
+    } finally {
       setReady(true);
-      return;
     }
-    supa.then((c) => {
-      setClient(c);
-      c.auth.getSession().then(({ data }) => {
-        setSession(data.session);
-        setReady(true);
-      });
-      c.auth.onAuthStateChange((_e, s) => setSession(s));
-    });
   }, []);
 
-  if (!supabaseConfigured) return <SetupInstructions />;
-  if (!ready) return <div className="admin-shell"><p className="admin-muted">Loading…</p></div>;
-  if (!client) return <SetupInstructions />;
-  if (!session) return <SignIn client={client} />;
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
-  return <Dashboard client={client} />;
+  if (!ready) {
+    return (
+      <div className="admin-shell">
+        <p className="admin-muted">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!session?.configured) return <SetupInstructions />;
+  if (!session.authenticated) return <SignIn onSuccess={refresh} />;
+
+  return <Dashboard cmsReady={session.cmsReady} onSignOut={refresh} />;
 }
 
 function SetupInstructions() {
   return (
     <div className="admin-shell">
       <div className="admin-card">
-        <h1>Admin isn't connected yet</h1>
+        <h1>Admin isn't configured yet</h1>
         <p>
-          The photo book and library are managed through Supabase. To switch it on:
+          Admin credentials live only in server environment variables — they are never shipped to
+          the browser. Set these in Vercel → Project Settings → Environment Variables:
         </p>
-        <ol>
-          <li>Create a free project at <a href="https://supabase.com">supabase.com</a></li>
-          <li>
-            In the SQL editor, run the setup script from{" "}
-            <code>docs/supabase-setup.sql</code> in this repo
-          </li>
-          <li>
-            Add your credentials as environment variables (locally in <code>.env</code>, and in
-            Vercel → Project Settings → Environment Variables):
-            <pre>{`VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
-VITE_SUPABASE_ANON_KEY=YOUR-ANON-KEY`}</pre>
-          </li>
-          <li>
-            Create your admin user in Supabase → Authentication → Users → "Add user"
-          </li>
-          <li>Redeploy, then come back to <code>/admin</code></li>
-        </ol>
+        <ul>
+          <li><code>ADMIN_USERNAME</code></li>
+          <li><code>ADMIN_PASSWORD</code></li>
+          <li><code>ADMIN_SESSION_SECRET</code></li>
+          <li><code>SUPABASE_URL</code> + <code>SUPABASE_SERVICE_ROLE_KEY</code></li>
+          <li><code>VITE_SUPABASE_URL</code> + <code>VITE_SUPABASE_ANON_KEY</code> (public reads)</li>
+        </ul>
+        <p>
+          Run <code>node scripts/generate-admin-secrets.mjs</code> locally to generate random
+          values. Then run <code>docs/supabase-setup.sql</code> in your Supabase SQL editor.
+        </p>
         <p className="admin-muted">
-          Until then, the loft shows the default book list and placeholder photos.
+          Until CMS is connected, the loft uses built-in defaults and placeholder photos.
         </p>
-        <a className="admin-btn" href="/">Back to the loft</a>
+        <a className="admin-btn" href="/">
+          Back to the loft
+        </a>
       </div>
     </div>
   );
 }
 
-function SignIn({ client }: { client: SupabaseClient }) {
-  const [email, setEmail] = useState("");
+function SignIn({ onSuccess }: { onSuccess: () => void }) {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -94,23 +90,29 @@ function SignIn({ client }: { client: SupabaseClient }) {
     e.preventDefault();
     setBusy(true);
     setError("");
-    const { error } = await client.auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
-    setBusy(false);
+    try {
+      await login(username.trim(), password);
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign in failed.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <div className="admin-shell">
       <form className="admin-card admin-login" onSubmit={submit}>
         <h1>The Loft — Admin</h1>
+        <p className="admin-muted">Credentials are verified server-side only.</p>
         <label>
-          Email
+          Username
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             required
-            autoComplete="email"
+            autoComplete="username"
           />
         </label>
         <label>
@@ -127,13 +129,21 @@ function SignIn({ client }: { client: SupabaseClient }) {
         <button className="admin-btn" disabled={busy}>
           {busy ? "Signing in…" : "Sign in"}
         </button>
+        <a className="admin-muted" href="/" style={{ marginTop: 12, display: "inline-block" }}>
+          ← Back to the loft
+        </a>
       </form>
     </div>
   );
 }
 
-function Dashboard({ client }: { client: SupabaseClient }) {
+function Dashboard({ cmsReady, onSignOut }: { cmsReady: boolean; onSignOut: () => void }) {
   const [tab, setTab] = useState<"photos" | "books">("photos");
+
+  async function signOut() {
+    await logout();
+    onSignOut();
+  }
 
   return (
     <div className="admin-shell">
@@ -153,73 +163,69 @@ function Dashboard({ client }: { client: SupabaseClient }) {
             Library
           </button>
           <a href="/">View loft</a>
-          <button onClick={() => client.auth.signOut()}>Sign out</button>
+          <button onClick={signOut}>Sign out</button>
         </nav>
       </header>
-      {tab === "photos" ? <PhotosTab client={client} /> : <BooksTab client={client} />}
+      {!cmsReady && (
+        <p className="admin-error admin-body">
+          Signed in, but CMS storage is not configured. Add{" "}
+          <code>SUPABASE_SERVICE_ROLE_KEY</code> on the server.
+        </p>
+      )}
+      {tab === "photos" ? <PhotosTab disabled={!cmsReady} /> : <BooksTab disabled={!cmsReady} />}
     </div>
   );
 }
 
-/* ---------------- photos ---------------- */
-
-function PhotosTab({ client }: { client: SupabaseClient }) {
+function PhotosTab({ disabled }: { disabled: boolean }) {
   const [photos, setPhotos] = useState<PhotoRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
-    const { data, error } = await client
-      .from("photos")
-      .select("id,storage_path,caption,sort")
-      .order("sort");
-    if (error) {
-      setError(error.message);
-      return;
+    if (disabled) return;
+    try {
+      setPhotos(await fetchPhotos());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load photos.");
     }
-    setPhotos(
-      (data as PhotoRow[]).map((p) => ({
-        ...p,
-        url: client.storage.from("photos").getPublicUrl(p.storage_path).data.publicUrl,
-      }))
-    );
-  }, [client]);
+  }, [disabled]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   async function upload(files: FileList | null) {
-    if (!files?.length) return;
+    if (!files?.length || disabled) return;
     setBusy(true);
     setError("");
     for (const file of Array.from(files)) {
-      const path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-      const { error: upErr } = await client.storage.from("photos").upload(path, file);
-      if (upErr) {
-        setError(upErr.message);
-        continue;
+      try {
+        await uploadPhoto(file);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Upload failed.");
       }
-      const { error: insErr } = await client.from("photos").insert({
-        storage_path: path,
-        caption: file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " "),
-        sort: photos.length,
-      });
-      if (insErr) setError(insErr.message);
     }
     await load();
     setBusy(false);
   }
 
   async function saveCaption(id: string, caption: string) {
-    await client.from("photos").update({ caption }).eq("id", id);
+    try {
+      await updatePhotoCaption(id, caption);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed.");
+    }
   }
 
   async function remove(photo: PhotoRow) {
     if (!confirm("Delete this photo?")) return;
-    await client.storage.from("photos").remove([photo.storage_path]);
-    await client.from("photos").delete().eq("id", photo.id);
-    await load();
+    try {
+      await deletePhoto(photo.id);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed.");
+    }
   }
 
   return (
@@ -230,7 +236,7 @@ function PhotosTab({ client }: { client: SupabaseClient }) {
           type="file"
           accept="image/*"
           multiple
-          disabled={busy}
+          disabled={busy || disabled}
           onChange={(e) => upload(e.target.files)}
         />
       </label>
@@ -245,17 +251,18 @@ function PhotosTab({ client }: { client: SupabaseClient }) {
             <input
               defaultValue={p.caption ?? ""}
               placeholder="Caption"
+              disabled={disabled}
               onBlur={(e) => saveCaption(p.id, e.target.value)}
             />
-            <button onClick={() => remove(p)}>Delete</button>
+            <button disabled={disabled} onClick={() => remove(p)}>
+              Delete
+            </button>
           </figure>
         ))}
       </div>
     </div>
   );
 }
-
-/* ---------------- books ---------------- */
 
 const EMPTY_BOOK = {
   title: "",
@@ -266,19 +273,19 @@ const EMPTY_BOOK = {
   color: "#5f7d5a",
 };
 
-function BooksTab({ client }: { client: SupabaseClient }) {
+function BooksTab({ disabled }: { disabled: boolean }) {
   const [books, setBooks] = useState<BookRow[]>([]);
   const [draft, setDraft] = useState({ ...EMPTY_BOOK });
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
-    const { data, error } = await client
-      .from("books")
-      .select("id,title,author,status,notes,buy_url,color,sort")
-      .order("sort");
-    if (error) setError(error.message);
-    else setBooks(data as BookRow[]);
-  }, [client]);
+    if (disabled) return;
+    try {
+      setBooks(await fetchBooks());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load books.");
+    }
+  }, [disabled]);
 
   useEffect(() => {
     load();
@@ -286,23 +293,32 @@ function BooksTab({ client }: { client: SupabaseClient }) {
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
-    if (!draft.title) return;
-    const { error } = await client.from("books").insert({ ...draft, sort: books.length });
-    if (error) setError(error.message);
-    else {
+    if (!draft.title || disabled) return;
+    try {
+      await createBook(draft);
       setDraft({ ...EMPTY_BOOK });
       await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Add failed.");
     }
   }
 
   async function update(id: string, patch: Partial<BookRow>) {
-    await client.from("books").update(patch).eq("id", id);
+    try {
+      await updateBook(id, patch);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Update failed.");
+    }
   }
 
   async function remove(id: string) {
     if (!confirm("Remove this book?")) return;
-    await client.from("books").delete().eq("id", id);
-    await load();
+    try {
+      await deleteBook(id);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed.");
+    }
   }
 
   return (
@@ -317,16 +333,19 @@ function BooksTab({ client }: { client: SupabaseClient }) {
         <input
           placeholder="Title"
           value={draft.title}
+          disabled={disabled}
           onChange={(e) => setDraft({ ...draft, title: e.target.value })}
           required
         />
         <input
           placeholder="Author"
           value={draft.author}
+          disabled={disabled}
           onChange={(e) => setDraft({ ...draft, author: e.target.value })}
         />
         <select
           value={draft.status}
+          disabled={disabled}
           onChange={(e) => setDraft({ ...draft, status: e.target.value })}
         >
           <option value="read">Read</option>
@@ -335,33 +354,44 @@ function BooksTab({ client }: { client: SupabaseClient }) {
         <input
           placeholder="Buy link"
           value={draft.buy_url}
+          disabled={disabled}
           onChange={(e) => setDraft({ ...draft, buy_url: e.target.value })}
         />
         <input
           type="color"
           value={draft.color}
+          disabled={disabled}
           onChange={(e) => setDraft({ ...draft, color: e.target.value })}
           title="Cover color"
         />
         <input
           placeholder="Notes (shown when the book is pulled out)"
           value={draft.notes}
+          disabled={disabled}
           onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
         />
-        <button className="admin-btn">Add book</button>
+        <button className="admin-btn" disabled={disabled}>
+          Add book
+        </button>
       </form>
       <div className="admin-books">
         {books.map((b) => (
           <div key={b.id} className="admin-book-row">
             <span className="admin-book-swatch" style={{ background: b.color ?? "#5f7d5a" }} />
-            <input defaultValue={b.title} onBlur={(e) => update(b.id, { title: e.target.value })} />
+            <input
+              defaultValue={b.title}
+              disabled={disabled}
+              onBlur={(e) => update(b.id, { title: e.target.value })}
+            />
             <input
               defaultValue={b.author ?? ""}
               placeholder="Author"
+              disabled={disabled}
               onBlur={(e) => update(b.id, { author: e.target.value })}
             />
             <select
               defaultValue={b.status ?? "read"}
+              disabled={disabled}
               onChange={(e) => update(b.id, { status: e.target.value })}
             >
               <option value="read">Read</option>
@@ -370,14 +400,18 @@ function BooksTab({ client }: { client: SupabaseClient }) {
             <input
               defaultValue={b.notes ?? ""}
               placeholder="Notes"
+              disabled={disabled}
               onBlur={(e) => update(b.id, { notes: e.target.value })}
             />
             <input
               defaultValue={b.buy_url ?? ""}
               placeholder="Buy link"
+              disabled={disabled}
               onBlur={(e) => update(b.id, { buy_url: e.target.value })}
             />
-            <button onClick={() => remove(b.id)}>✕</button>
+            <button disabled={disabled} onClick={() => remove(b.id)}>
+              ✕
+            </button>
           </div>
         ))}
       </div>

@@ -87,6 +87,5 @@ create policy "photo files admin delete"
   to authenticated
   using (bucket_id = 'photos');
 
--- Finally: create your admin user in
--- Supabase Dashboard -> Authentication -> Users -> "Add user"
--- (email + password), then sign in at /admin.
+-- Finally: set server env vars for /admin (see .env.example).
+-- Admin auth is handled by Vercel API routes — no Supabase user password needed.

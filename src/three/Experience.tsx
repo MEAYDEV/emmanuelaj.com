@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useFrame } from "@react-three/fiber";
 import { AdaptiveDpr, CameraControls, PerspectiveCamera, Stars } from "@react-three/drei";
 import { Physics } from "@react-three/rapier";
@@ -9,9 +9,10 @@ import Avatar from "./Avatar";
 import LibraryBooks from "./LibraryBooks";
 import VinylBrowser from "./VinylBrowser";
 import Atmosphere from "./Atmosphere";
-import Effects from "./Effects";
 import { playerPosRef, useGame } from "../store";
 import { INTERACTABLES } from "../data/content";
+
+const Effects = lazy(() => import("./Effects"));
 
 const FOCUS_CAMS = {
   library: { pos: [4.55, 1.85, -4.2], tgt: [6.7, 1.5, -4.2] },
@@ -286,7 +287,9 @@ export default function Experience() {
       <Atmosphere />
       {/* Camera must mount before Effects so the composer binds the right lens */}
       {phase === "arrival" ? <ArrivalCamera /> : <InsideCameraRig />}
-      <Effects />
+      <Suspense fallback={null}>
+        <Effects />
+      </Suspense>
       <AdaptiveDpr />
     </>
   );
