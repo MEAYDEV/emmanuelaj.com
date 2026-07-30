@@ -80,3 +80,4 @@ export function checkCredentials(username: string, password: string): boolean {
   if (!expectedUser || !expectedPass || !secret) return false;
   return safeEqual(username, expectedUser) && safeEqual(password, expectedPass);
 }
+
