@@ -13,6 +13,10 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 }
 
 * {
@@ -33,6 +37,7 @@ body {
   color: var(--text);
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
 }
 
 #root canvas {
@@ -207,8 +212,8 @@ button {
 
 .hud-brand {
   position: absolute;
-  top: 18px;
-  left: 22px;
+  top: calc(18px + var(--safe-top));
+  left: calc(22px + var(--safe-left));
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 500;
@@ -221,8 +226,8 @@ button {
 
 .hud-lite {
   position: absolute;
-  top: 18px;
-  right: 22px;
+  top: calc(18px + var(--safe-top));
+  right: calc(22px + var(--safe-right));
   color: var(--text-soft);
   background: var(--panel);
   border: 1px solid var(--panel-line);
@@ -244,8 +249,8 @@ button {
 
 .hud-needs {
   position: absolute;
-  left: 22px;
-  bottom: 22px;
+  left: calc(22px + var(--safe-left));
+  bottom: calc(22px + var(--safe-bottom));
   background: var(--panel);
   border: 1px solid var(--panel-line);
   border-radius: 14px;
@@ -290,8 +295,8 @@ button {
 
 .hud-controls {
   position: absolute;
-  right: 22px;
-  bottom: 22px;
+  right: calc(22px + var(--safe-right));
+  bottom: calc(22px + var(--safe-bottom));
   background: var(--panel);
   border: 1px solid var(--panel-line);
   border-radius: 14px;
@@ -328,7 +333,7 @@ button {
 
 .hud-nowplaying {
   position: absolute;
-  bottom: 22px;
+  bottom: calc(22px + var(--safe-bottom));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -380,7 +385,7 @@ button {
 .prompt {
   position: fixed;
   left: 50%;
-  bottom: 110px;
+  bottom: calc(110px + var(--safe-bottom));
   transform: translateX(-50%);
   z-index: 30;
   display: flex;
@@ -937,20 +942,150 @@ button {
 /* ============ Mobile controls ============ */
 .mobile-x {
   position: fixed;
-  right: 26px;
-  bottom: 96px;
+  right: calc(20px + var(--safe-right));
+  bottom: calc(92px + var(--safe-bottom));
   z-index: 35;
-  width: 62px;
-  height: 62px;
-  border-radius: 50%;
+  min-width: 82px;
+  min-height: 82px;
+  padding: 12px 14px;
+  border-radius: 22px;
   border: 2px solid var(--green-deep);
   background: var(--green);
   color: #06220f;
   font-weight: 800;
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  touch-action: manipulation;
+}
+
+.mobile-x span {
+  line-height: 1;
+}
+
+.mobile-x small {
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.05;
 }
 
 @media (min-width: 768px) {
   .hud-needs { min-width: 190px; }
+}
+
+@media (max-width: 760px) {
+  .arrival-title {
+    top: calc(14px + var(--safe-top));
+    max-width: min(92vw, 420px);
+  }
+
+  .arrival-kicker {
+    font-size: 0.64rem;
+    letter-spacing: 0.18em;
+    margin-bottom: 8px;
+  }
+
+  .arrival-title h1 {
+    font-size: clamp(1.8rem, 10vw, 2.5rem);
+    margin-bottom: 8px;
+  }
+
+  .arrival-sub {
+    font-size: 0.86rem;
+    line-height: 1.38;
+  }
+
+  .hud-brand,
+  .hud-lite {
+    top: calc(12px + var(--safe-top));
+  }
+
+  .hud-brand {
+    left: calc(14px + var(--safe-left));
+    font-size: 1rem;
+  }
+
+  .hud-lite {
+    right: calc(14px + var(--safe-right));
+    padding: 8px 12px;
+    font-size: 0.74rem;
+  }
+
+  .hud-needs {
+    left: calc(12px + var(--safe-left));
+    bottom: calc(12px + var(--safe-bottom));
+    min-width: 132px;
+    padding: 10px 12px;
+    gap: 6px;
+    font-size: 0.74rem;
+  }
+
+  .hud-controls {
+    right: calc(12px + var(--safe-right));
+    bottom: calc(12px + var(--safe-bottom));
+    max-width: min(44vw, 170px);
+    padding: 10px 12px;
+    gap: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    font-size: 0.72rem;
+  }
+
+  .hud-nowplaying {
+    width: min(calc(100vw - 28px - var(--safe-left) - var(--safe-right)), 360px);
+    bottom: calc(18px + var(--safe-bottom));
+    gap: 9px;
+    padding: 9px 10px 9px 14px;
+  }
+
+  .hud-nowplaying span:last-of-type {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .hud-nowplaying strong,
+  .hud-nowplaying em {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .prompt {
+    width: min(calc(100vw - 28px - var(--safe-left) - var(--safe-right)), 320px);
+    bottom: calc(92px + var(--safe-bottom));
+    padding: 11px 16px 11px 12px;
+    gap: 10px;
+    justify-content: center;
+    font-size: 0.88rem;
+  }
+
+  .dialogue-backdrop {
+    padding: calc(12px + var(--safe-top)) calc(12px + var(--safe-right))
+      calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left));
+  }
+
+  .dialogue,
+  .focus-panel {
+    width: min(calc(100vw - 24px - var(--safe-left) - var(--safe-right)), 420px);
+    max-height: min(72vh, 560px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-x {
+    right: calc(14px + var(--safe-right));
+    bottom: calc(88px + var(--safe-bottom));
+    min-width: 76px;
+    min-height: 76px;
+  }
+
+  .grain {
+    opacity: 0.022;
+  }
 }

@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import LoadingScreen from "./ui/LoadingScreen";
 import Hud from "./ui/Hud";
@@ -13,18 +13,24 @@ import ArrivalTitle from "./ui/ArrivalTitle";
 const Experience = lazy(() => import("./three/Experience"));
 
 export default function App() {
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+
+  useEffect(() => {
+    setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches);
+  }, []);
+
   return (
     <>
       <Canvas
         shadows
         camera={{ position: [3.4, 3.1, 14.2], fov: 40 }}
-        dpr={[1, 1.5]}
+        dpr={isTouchDevice ? [1, 1.2] : [1, 1.5]}
         gl={{
-          antialias: true,
+          antialias: !isTouchDevice,
           powerPreference: "high-performance",
           toneMappingExposure: 1.05,
         }}
-        performance={{ min: 0.5 }}
+        performance={{ min: isTouchDevice ? 0.4 : 0.5 }}
       >
         <Suspense fallback={null}>
           <Experience />
