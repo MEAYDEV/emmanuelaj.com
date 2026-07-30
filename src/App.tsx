@@ -16,7 +16,11 @@ export default function App() {
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   useEffect(() => {
-    setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches);
+    const media = window.matchMedia("(pointer: coarse)");
+    const sync = () => setIsTouchDevice(media.matches);
+    sync();
+    media.addEventListener?.("change", sync);
+    return () => media.removeEventListener?.("change", sync);
   }, []);
 
   return (

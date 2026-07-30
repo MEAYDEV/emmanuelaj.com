@@ -12,23 +12,25 @@ export default function MobileControls() {
     setIsTouch(window.matchMedia("(pointer: coarse)").matches);
   }, []);
 
-  if (!isTouch || phase !== "inside") return null;
+  if (!isTouch) return null;
 
   return (
     <>
-      <Joystick
-        joystickWrapperStyle={{
-          position: "fixed",
-          left: 18,
-          bottom: 96,
-          width: 150,
-          height: 150,
-          zIndex: 35,
-        }}
-      />
+      {phase === "inside" && (
+        <Joystick
+          joystickWrapperStyle={{
+            position: "fixed",
+            left: "calc(14px + env(safe-area-inset-left, 0px))",
+            bottom: "calc(82px + env(safe-area-inset-bottom, 0px))",
+            width: 144,
+            height: 144,
+            zIndex: 35,
+          }}
+        />
+      )}
       {prompt && (
         <button className="mobile-x" onClick={prompt.run} aria-label={prompt.label}>
-          <span>{prompt.key}</span>
+          <span>Tap</span>
           <small>{prompt.label}</small>
         </button>
       )}

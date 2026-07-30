@@ -1089,3 +1089,21 @@ button {
     opacity: 0.022;
   }
 }
+
+@media (pointer: coarse) {
+  .prompt {
+    display: none;
+  }
+
+  .hud-controls {
+    max-width: min(44vw, 180px);
+  }
+
+  .hud-lite:hover,
+  .prompt:hover,
+  .dialogue-links a:hover,
+  .dialogue-footer button:hover,
+  .focus-cta:hover {
+    transform: none;
+  }
+}
