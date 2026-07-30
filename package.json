@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:full": "vercel dev",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.api.json --noEmit && vite build",
     "preview": "vite preview",
     "generate-secrets": "node scripts/generate-admin-secrets.mjs"
   },
