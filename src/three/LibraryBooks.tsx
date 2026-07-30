@@ -52,7 +52,7 @@ function BookMesh({ book, index }: BookMeshProps) {
     return () => materials.forEach((m) => m.dispose());
   }, [materials]);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     const g = group.current;
     if (!g) return;
     const state = useGame.getState();
@@ -64,10 +64,12 @@ function BookMesh({ book, index }: BookMeshProps) {
       : hovered && inLibrary
         ? new THREE.Vector3(slot.x - 0.09, slot.y, slot.z)
         : slot;
-    g.position.lerp(target, 0.14);
+    g.position.x = THREE.MathUtils.damp(g.position.x, target.x, 10, delta);
+    g.position.y = THREE.MathUtils.damp(g.position.y, target.y, 10, delta);
+    g.position.z = THREE.MathUtils.damp(g.position.z, target.z, 10, delta);
 
     const targetRotY = selected ? -Math.PI / 2 : 0;
-    g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, targetRotY, 0.12);
+    g.rotation.y = THREE.MathUtils.damp(g.rotation.y, targetRotY, 8, delta);
   });
 
   return (

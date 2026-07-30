@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { CameraControls, Stars } from "@react-three/drei";
+import { AdaptiveDpr, CameraControls, PerspectiveCamera, Stars } from "@react-three/drei";
 import { Physics } from "@react-three/rapier";
 import * as THREE from "three";
 import Loft from "./Loft";
@@ -8,6 +8,8 @@ import Player from "./Player";
 import Avatar from "./Avatar";
 import LibraryBooks from "./LibraryBooks";
 import VinylBrowser from "./VinylBrowser";
+import Atmosphere from "./Atmosphere";
+import Effects from "./Effects";
 import { playerPosRef, useGame } from "../store";
 import { INTERACTABLES } from "../data/content";
 
@@ -17,55 +19,117 @@ const FOCUS_CAMS = {
   photos: { pos: [3.4, 4.9, -3.2], tgt: [2.9, 3.7, -5.3] },
 } as const;
 
-function CameraRig() {
+const GREETER_POS = new THREE.Vector3(0.35, 0, 7.9);
+// Mesh forward = +Z. Greeter faces the visitor on the stoop.
+const GREETER_FACE = new THREE.Vector3(0.35, 1.55, 7.9);
+
+/** Arrival-only camera — dedicated PerspectiveCamera so nothing else owns the lens. */
+function ArrivalCamera() {
+  const camRef = useRef<THREE.PerspectiveCamera>(null);
+  const introT = useRef(0);
+
+  useFrame((_, delta) => {
+    const cam = camRef.current;
+    if (!cam) return;
+    introT.current += delta;
+    const t = introT.current;
+    // Outside on the stoop, looking in at the greeter's face.
+    let pos: THREE.Vector3;
+    if (t < 1.25) {
+      const k = THREE.MathUtils.smootherstep(t / 1.25, 0, 1);
+      pos = new THREE.Vector3(3.2, 2.8, 13.5).lerp(new THREE.Vector3(1.4, 2.1, 12.0), k);
+    } else if (t < 2.7) {
+      const k = THREE.MathUtils.smootherstep((t - 1.25) / 1.45, 0, 1);
+      pos = new THREE.Vector3(1.4, 2.1, 12.0).lerp(new THREE.Vector3(0.35, 1.55, 11.0), k);
+    } else {
+      pos = new THREE.Vector3(0.35, 1.55, 11.0);
+    }
+    cam.position.copy(pos);
+    cam.up.set(0, 1, 0);
+    cam.lookAt(GREETER_FACE);
+    cam.updateProjectionMatrix();
+    cam.updateMatrixWorld(true);
+  });
+
+  return <PerspectiveCamera ref={camRef} makeDefault fov={34} near={0.1} far={80} />;
+}
+
+function InsideCameraRig() {
   const controls = useRef<CameraControls>(null);
+  const prevPhase = useRef<string>("arrival");
   const phase = useGame((s) => s.phase);
   const focus = useGame((s) => s.focus);
 
   useEffect(() => {
     const c = controls.current;
     if (!c) return;
-    c.smoothTime = 0.22;
-    if (phase === "arrival") {
-      c.enabled = false;
-      c.setLookAt(0.3, 2.1, 11.6, 0.75, 1.35, 6.7, false);
-      return;
-    }
     if (focus) {
       const cam = FOCUS_CAMS[focus];
       c.enabled = false;
+      c.smoothTime = 0.55;
       c.setLookAt(cam.pos[0], cam.pos[1], cam.pos[2], cam.tgt[0], cam.tgt[1], cam.tgt[2], true);
       return;
     }
-    // back to third-person follow
+    const entering = prevPhase.current === "arrival";
+    prevPhase.current = phase;
     const p = playerPosRef.current;
     c.enabled = true;
-    c.setLookAt(p.x, p.y + 1.7, p.z + 2.9, p.x, p.y + 0.6, p.z, true);
+    c.smoothTime = entering ? 0.75 : 0.32;
+    c.setLookAt(p.x, p.y + 1.75, p.z + 3.0, p.x, p.y + 0.7, p.z, true);
+    const timer = setTimeout(() => {
+      if (controls.current) controls.current.smoothTime = 0.2;
+    }, 2000);
+    return () => clearTimeout(timer);
   }, [phase, focus]);
 
   useFrame(() => {
     const g = useGame.getState();
-    if (g.phase !== "inside" || g.focus) return;
+    if (g.focus) return;
     const p = playerPosRef.current;
-    controls.current?.moveTo(p.x, p.y + 0.6, p.z, true);
+    controls.current?.moveTo(p.x, p.y + 0.65, p.z, true);
   });
 
   return (
     <CameraControls
       ref={controls}
       makeDefault
-      minDistance={2.2}
-      maxDistance={7}
-      maxPolarAngle={Math.PI * 0.49}
-      draggingSmoothTime={0.08}
+      minDistance={2.0}
+      maxDistance={8.5}
+      maxPolarAngle={Math.PI * 0.48}
+      draggingSmoothTime={0.12}
+      azimuthRotateSpeed={0.55}
+      polarRotateSpeed={0.45}
     />
   );
 }
 
 function ArrivalGreeter() {
+  const key = useRef<THREE.SpotLight>(null);
+
+  useFrame(() => {
+    if (key.current) {
+      key.current.target.position.copy(GREETER_FACE);
+      key.current.target.updateMatrixWorld();
+    }
+  });
+
+  // Face the visitor (+Z). Dedicated arrival camera sits further along +Z.
   return (
-    <group position={[0.75, 0, 6.85]}>
+    <group position={[GREETER_POS.x, GREETER_POS.y, GREETER_POS.z]} rotation={[0, 0, 0]}>
       <Avatar animateWalk={false} />
+      <spotLight
+        ref={key}
+        position={[0.55, 2.55, 10.8]}
+        angle={0.4}
+        penumbra={0.65}
+        intensity={70}
+        distance={10}
+        color="#ffe8d0"
+        castShadow={false}
+      />
+      <pointLight position={[0.35, 1.65, 9.8]} intensity={28} distance={4.5} color="#ffd4a8" />
+      <pointLight position={[-0.9, 2.2, 8.6]} intensity={10} distance={4.5} color="#a8bce8" />
+      <pointLight position={[0.9, 1.9, 9.2]} intensity={8} distance={3.5} color="#fff0dd" />
     </group>
   );
 }
@@ -81,12 +145,16 @@ function InteractableMarkers() {
     const nearId = useGame.getState().nearId;
     ref.current.children.forEach((child) => {
       const active = child.userData.id === nearId;
-      const s = 1 + Math.sin(t * 3 + child.position.x) * 0.06;
-      child.scale.setScalar(active ? s * 1.15 : s);
-      const mesh = child.children[0] as THREE.Mesh;
-      const mat = mesh.material as THREE.MeshStandardMaterial;
-      mat.emissiveIntensity = active ? 2.2 : 0.9;
-      mat.opacity = active ? 0.95 : 0.5;
+      const breathe = 1 + Math.sin(t * 2.6 + child.position.x) * 0.05;
+      child.scale.setScalar(active ? breathe * 1.18 : breathe);
+      const ring = child.children[0] as THREE.Mesh;
+      const fill = child.children[1] as THREE.Mesh;
+      const ringMat = ring.material as THREE.MeshStandardMaterial;
+      const fillMat = fill.material as THREE.MeshBasicMaterial;
+      ringMat.emissiveIntensity = active ? 2.4 : 0.7;
+      ringMat.opacity = active ? 0.95 : 0.38;
+      fillMat.opacity = active ? 0.18 : 0.05;
+      child.rotation.y = t * (active ? 0.55 : 0.15);
     });
   });
 
@@ -97,18 +165,28 @@ function InteractableMarkers() {
       {INTERACTABLES.map((item) => (
         <group
           key={item.id}
-          position={[item.position[0], item.position[1] + 0.04, item.position[2]]}
+          position={[item.position[0], item.position[1] + 0.035, item.position[2]]}
           userData={{ id: item.id }}
         >
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.38, 0.5, 28]} />
+            <ringGeometry args={[0.42, 0.52, 40]} />
             <meshStandardMaterial
               color="#4ade80"
               emissive="#4ade80"
-              emissiveIntensity={0.9}
+              emissiveIntensity={0.7}
               transparent
-              opacity={0.5}
+              opacity={0.38}
               side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]}>
+            <circleGeometry args={[0.42, 40]} />
+            <meshBasicMaterial
+              color="#4ade80"
+              transparent
+              opacity={0.05}
+              depthWrite={false}
             />
           </mesh>
         </group>
@@ -167,29 +245,34 @@ export default function Experience() {
       <fog attach="fog" args={["#0b0d14", 22, 60]} />
       <Stars radius={70} depth={25} count={1600} factor={3.2} fade speed={0.6} />
 
-      {/* lighting */}
-      <ambientLight intensity={0.45} color="#8899bb" />
+      {/* lighting — cool moonlight + warm interior pools */}
+      <ambientLight intensity={0.32} color="#7a8aad" />
+      <hemisphereLight args={["#8fa3c8", "#2a2018", 0.35]} />
       <directionalLight
-        position={[-6, 12, -10]}
-        intensity={1.1}
-        color="#aebfe8"
+        position={[-8, 14, -12]}
+        intensity={1.35}
+        color="#b8c8e8"
         castShadow
-        shadow-mapSize={[1024, 1024]}
+        shadow-mapSize={[1536, 1536]}
         shadow-camera-left={-14}
         shadow-camera-right={14}
         shadow-camera-top={14}
         shadow-camera-bottom={-14}
+        shadow-bias={-0.0002}
       />
       {/* warm interior lights */}
-      <pointLight position={[-4.4, 2.3, -3.2]} intensity={22} distance={9} color="#ffb45c" />
-      <pointLight position={[-6.2, 2.3, -0.6]} intensity={14} distance={7} color="#ffb45c" />
-      <pointLight position={[5.9, 2.3, 4.9]} intensity={14} distance={7} color="#ffb45c" />
-      <pointLight position={[4.6, 4.6, -3.6]} intensity={12} distance={7} color="#ffcf8a" />
-      <pointLight position={[5.4, 2.4, -0.6]} intensity={10} distance={6} color="#ffb45c" />
-      {/* library nook light under the mezzanine */}
-      <pointLight position={[5.2, 2.5, -4.2]} intensity={9} distance={5} color="#ffcf8a" />
-      {/* porch light */}
-      <pointLight position={[0, 3.0, 7.2]} intensity={16} distance={8} color="#ffb45c" />
+      <pointLight position={[-4.4, 2.3, -3.2]} intensity={28} distance={10} decay={2} color="#ffb45c" />
+      <pointLight position={[-6.2, 2.3, -0.6]} intensity={16} distance={7} decay={2} color="#ffb45c" />
+      <pointLight position={[5.9, 2.3, 4.9]} intensity={16} distance={7} decay={2} color="#ffb45c" />
+      <pointLight position={[4.6, 4.6, -3.6]} intensity={14} distance={7} decay={2} color="#ffcf8a" />
+      <pointLight position={[5.4, 2.4, -0.6]} intensity={12} distance={6} decay={2} color="#ffb45c" />
+      {/* library nook */}
+      <pointLight position={[5.2, 2.5, -4.2]} intensity={12} distance={5.5} decay={2} color="#ffcf8a" />
+      {/* porch sconce */}
+      <pointLight position={[0, 3.3, 7.2]} intensity={26} distance={10} decay={2} color="#ffb45c" />
+      {/* soft fill from facade windows */}
+      <pointLight position={[-3.6, 2.4, 6.0]} intensity={8} distance={5} decay={2} color="#ff9d45" />
+      <pointLight position={[3.6, 2.4, 6.0]} intensity={8} distance={5} decay={2} color="#ff9d45" />
 
       <Physics timeStep={1 / 60}>
         <Loft />
@@ -200,7 +283,11 @@ export default function Experience() {
       <VinylBrowser />
       <InteractableMarkers />
       <CityBackdrop />
-      <CameraRig />
+      <Atmosphere />
+      {/* Camera must mount before Effects so the composer binds the right lens */}
+      {phase === "arrival" ? <ArrivalCamera /> : <InsideCameraRig />}
+      <Effects />
+      <AdaptiveDpr />
     </>
   );
 }

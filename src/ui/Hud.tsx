@@ -6,25 +6,27 @@ export default function Hud() {
 
   return (
     <div className="hud">
-      <div className="hud-brand">Emmanuel's Loft</div>
+      {phase === "inside" && <div className="hud-brand">Emmanuel's Loft</div>}
       <a className="hud-lite" href="/classic/">
         Lite site
       </a>
 
-      <div className="hud-needs" aria-hidden="true">
-        <div className="hud-need">
-          <span>Fun</span>
-          <i style={{ "--v": "100%" } as React.CSSProperties} />
+      {phase === "inside" && (
+        <div className="hud-needs" aria-hidden="true">
+          <div className="hud-need">
+            <span>Fun</span>
+            <i style={{ "--v": "100%" } as React.CSSProperties} />
+          </div>
+          <div className="hud-need">
+            <span>Curiosity</span>
+            <i style={{ "--v": "96%" } as React.CSSProperties} />
+          </div>
+          <div className="hud-need">
+            <span>Coffee</span>
+            <i style={{ "--v": "34%" } as React.CSSProperties} />
+          </div>
         </div>
-        <div className="hud-need">
-          <span>Curiosity</span>
-          <i style={{ "--v": "96%" } as React.CSSProperties} />
-        </div>
-        <div className="hud-need">
-          <span>Coffee</span>
-          <i style={{ "--v": "34%" } as React.CSSProperties} />
-        </div>
-      </div>
+      )}
 
       {phase === "inside" && (
         <div className="hud-controls">

@@ -145,3 +145,109 @@ export const GENRE_COLORS: Record<string, string> = {
   Amapiano: "#5f7d5a",
   Miscellaneous: "#8c5a7a",
 };
+
+/** Procedural brick — warm mortar, slight value variation. */
+export function makeBrickTexture() {
+  const canvas = makeCanvas(512, 512);
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#5a3a34";
+  ctx.fillRect(0, 0, 512, 512);
+
+  const brickW = 64;
+  const brickH = 28;
+  const mortar = 3;
+  for (let row = 0; row < 20; row++) {
+    const offset = (row % 2) * (brickW / 2);
+    for (let col = -1; col < 10; col++) {
+      const x = col * brickW + offset;
+      const y = row * brickH;
+      const v = 0.82 + ((row * 7 + col * 13) % 5) * 0.035;
+      const r = Math.floor(98 * v);
+      const g = Math.floor(64 * v);
+      const b = Math.floor(56 * v);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(x + mortar, y + mortar, brickW - mortar * 2, brickH - mortar * 2);
+      // subtle edge highlight
+      ctx.fillStyle = `rgba(255,220,200,${0.04 + (col % 3) * 0.01})`;
+      ctx.fillRect(x + mortar, y + mortar, brickW - mortar * 2, 2);
+    }
+  }
+
+  const tex = toTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(4, 3);
+  return tex;
+}
+
+/** Warm oak plank floor with soft grain. */
+export function makeWoodFloorTexture() {
+  const canvas = makeCanvas(512, 512);
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#6e5238";
+  ctx.fillRect(0, 0, 512, 512);
+
+  const plankH = 64;
+  for (let i = 0; i < 9; i++) {
+    const y = i * plankH;
+    const shade = 0.9 + ((i * 17) % 4) * 0.04;
+    ctx.fillStyle = `rgb(${Math.floor(122 * shade)},${Math.floor(92 * shade)},${Math.floor(64 * shade)})`;
+    ctx.fillRect(0, y, 512, plankH - 2);
+    // grain lines
+    ctx.strokeStyle = "rgba(40,24,12,0.12)";
+    ctx.lineWidth = 1;
+    for (let g = 0; g < 6; g++) {
+      const gy = y + 8 + g * 9 + ((i * 3 + g) % 4);
+      ctx.beginPath();
+      ctx.moveTo(0, gy);
+      ctx.bezierCurveTo(120, gy + 2, 280, gy - 2, 512, gy + 1);
+      ctx.stroke();
+    }
+    // seam
+    ctx.fillStyle = "rgba(30,18,10,0.35)";
+    ctx.fillRect(0, y + plankH - 2, 512, 2);
+  }
+
+  const tex = toTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(3, 3);
+  return tex;
+}
+
+/** Soft oriental-inspired rug disk. */
+export function makeRugTexture(base: string, accent: string) {
+  const canvas = makeCanvas(256, 256);
+  const ctx = canvas.getContext("2d")!;
+  const cx = 128;
+  const cy = 128;
+
+  ctx.fillStyle = base;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 126, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 110, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 88, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // medallion
+  ctx.fillStyle = accent;
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
+    const r = i % 2 === 0 ? 42 : 22;
+    const x = cx + Math.cos(a) * r;
+    const y = cy + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  return toTexture(canvas);
+}
