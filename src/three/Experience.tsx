@@ -9,7 +9,7 @@ import Avatar from "./Avatar";
 import LibraryBooks from "./LibraryBooks";
 import VinylBrowser from "./VinylBrowser";
 import Atmosphere from "./Atmosphere";
-import { playerPosRef, useGame } from "../store";
+import { playerPosRef, playerSpeedRef, useGame } from "../store";
 import { INTERACTABLES } from "../data/content";
 
 const Effects = lazy(() => import("./Effects"));
@@ -58,6 +58,11 @@ function ArrivalCamera() {
 function InsideCameraRig() {
   const controls = useRef<CameraControls>(null);
   const prevPhase = useRef<string>("arrival");
+  const currentPos = useRef(new THREE.Vector3());
+  const currentTarget = useRef(new THREE.Vector3());
+  const desiredTarget = useRef(new THREE.Vector3());
+  const desiredPos = useRef(new THREE.Vector3());
+  const followOffset = useRef(new THREE.Vector3(0, 1.1, 3.1));
   const phase = useGame((s) => s.phase);
   const focus = useGame((s) => s.focus);
 
@@ -76,18 +81,44 @@ function InsideCameraRig() {
     const p = playerPosRef.current;
     c.enabled = true;
     c.smoothTime = entering ? 0.75 : 0.32;
-    c.setLookAt(p.x, p.y + 1.75, p.z + 3.0, p.x, p.y + 0.7, p.z, true);
+    c.setLookAt(p.x, p.y + 1.8, p.z + 3.1, p.x, p.y + 0.82, p.z, true);
     const timer = setTimeout(() => {
       if (controls.current) controls.current.smoothTime = 0.2;
     }, 2000);
     return () => clearTimeout(timer);
   }, [phase, focus]);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     const g = useGame.getState();
     if (g.focus) return;
+    const c = controls.current;
+    if (!c) return;
+
     const p = playerPosRef.current;
-    controls.current?.moveTo(p.x, p.y + 0.65, p.z, true);
+    c.getPosition(currentPos.current);
+    c.getTarget(currentTarget.current);
+
+    followOffset.current.copy(currentPos.current).sub(currentTarget.current);
+    if (followOffset.current.lengthSq() < 0.001) {
+      followOffset.current.set(0, 1.1, 3.1);
+    }
+
+    desiredTarget.current.set(p.x, p.y + 0.82, p.z);
+    const followStrength = THREE.MathUtils.clamp(delta * (playerSpeedRef.current > 1 ? 6.5 : 4.5), 0, 1);
+    currentTarget.current.lerp(desiredTarget.current, followStrength);
+
+    desiredPos.current.copy(currentTarget.current).add(followOffset.current);
+    desiredPos.current.y = Math.max(desiredPos.current.y, p.y + 1.25);
+
+    c.setLookAt(
+      desiredPos.current.x,
+      desiredPos.current.y,
+      desiredPos.current.z,
+      currentTarget.current.x,
+      currentTarget.current.y,
+      currentTarget.current.z,
+      true
+    );
   });
 
   return (
