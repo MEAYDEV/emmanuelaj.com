@@ -175,7 +175,7 @@ cats.forEach((c) => {
       id: `${c.dir}-${nn}`,
       title: `${c.code} ${nn}`,
       genre: c.genre,
-      src: `beats/${c.dir}/${nn}.${ext}`,
+      src: `/beats/${c.dir}/${nn}.${ext}`,
     });
   }
 });

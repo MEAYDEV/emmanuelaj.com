@@ -1,29 +1,48 @@
-# EmmanuelAj.com
+# emmanuelaj.com — The Loft
 
-Personal website for Emmanuel Ajala. Plain HTML, CSS, and a little JavaScript. No build step, no framework.
+Emmanuel Ajala's personal site, reimagined as a Sims-inspired 3D loft you can
+walk around in. Built with React Three Fiber, Rapier physics, and the ecctrl
+character controller. The previous 2D site is preserved as the "classic" site.
 
-## Files
-- `index.html` — all the content
-- `styles.css` — layout, hero, and section styling
-- `script.js` — scroll reveal, hero effects, beats player
-- `assets/images/hero-portrait.png` — hero portrait (replace with your own file if you prefer)
+## Structure
 
-### Animated hero (optional)
-To use a looping portrait from [Higgsfield AI](https://higgsfield.ai/) or [open-generative-ai](https://github.com/anil-matcha/open-generative-ai), export a short `.webm` or `.mp4` and add a `<video>` inside `.portrait-frame` in `index.html` (poster=`hero-portrait.png`).
+- `src/` — the 3D experience (Vite + React + TypeScript)
+  - `three/` — scene: loft geometry, avatar, player controller, camera rig
+  - `ui/` — HUD, dialogue cards, prompts, loading screen
+  - `data/content.ts` — interactable zones + dialogue copy
+- `public/classic/` — the classic 2D site, served at `/classic/`
+- `public/beats/` — beat audio files (shared by both sites)
+- `docs/3d-portfolio-plan.md` — the full design plan and roadmap
 
 ## Run locally
-Open `index.html` in a browser, or:
 
 ```bash
-npx serve .
+npm install
+npm run dev
 ```
 
-## Deploy to Vercel
+## Build
+
 ```bash
-npm i -g vercel
-vercel
+npm run build   # typechecks, then outputs to dist/
 ```
 
-Then in the Vercel dashboard: Project Settings > Domains > add `emmanuelaj.com` and follow the DNS instructions from your domain registrar (add the A record and CNAME Vercel gives you).
+## Deploy
 
-GitHub Pages or Netlify work just as well since this is a static site.
+Vercel auto-detects Vite. The classic site ships as static files inside
+`public/`, so `/classic/` keeps working with no extra config.
+
+## Controls
+
+- `X` — interact (greet, read, spin records)
+- `E` — enter the loft
+- `W A S D` / arrows — walk · `Shift` — run · `Space` — jump
+- Drag — orbit camera · touch joystick on mobile
+
+## Roadmap (see docs/3d-portfolio-plan.md)
+
+1. ~~Walkable loft + door intro + interaction system~~ (this milestone)
+2. 3D pull-out library books (port of thebuggeddev/books)
+3. Vinyl crate flip-through with per-record sleeves
+4. Supabase admin page for photo book + content
+5. Real loft GLB with baked lighting, Ready Player Me avatar

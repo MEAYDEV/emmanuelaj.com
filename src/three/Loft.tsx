@@ -1,0 +1,586 @@
+import { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { RigidBody, CuboidCollider } from "@react-three/rapier";
+import * as THREE from "three";
+import { useGame } from "../store";
+
+/* palette */
+const BRICK = "#63413a";
+const BRICK_DARK = "#523229";
+const WOOD_FLOOR = "#7a5c40";
+const WOOD_WARM = "#8a6a4a";
+const STEEL = "#191c22";
+const CHARCOAL = "#26292f";
+const CREAM = "#c9c0b0";
+
+function Bx({
+  p,
+  s,
+  c,
+  r = [0, 0, 0],
+  rough = 0.9,
+  metal = 0,
+  emissive,
+  ei = 0,
+  shadow = true,
+}: {
+  p: [number, number, number];
+  s: [number, number, number];
+  c: string;
+  r?: [number, number, number];
+  rough?: number;
+  metal?: number;
+  emissive?: string;
+  ei?: number;
+  shadow?: boolean;
+}) {
+  return (
+    <mesh position={p} rotation={r} castShadow={shadow} receiveShadow>
+      <boxGeometry args={s} />
+      <meshStandardMaterial
+        color={c}
+        roughness={rough}
+        metalness={metal}
+        emissive={emissive ?? "#000000"}
+        emissiveIntensity={ei}
+      />
+    </mesh>
+  );
+}
+
+/* ---------------- structural shell (all solid) ---------------- */
+
+function Shell() {
+  return (
+    <group>
+      {/* floors */}
+      <Bx p={[0, -0.1, 0]} s={[14.4, 0.2, 12.4]} c={WOOD_FLOOR} rough={0.75} />
+      <Bx p={[0, -0.11, 8.6]} s={[20, 0.2, 5.4]} c="#3a3d45" />
+
+      {/* side walls */}
+      <Bx p={[-7.2, 3.5, 0]} s={[0.4, 7.2, 12.4]} c={BRICK} />
+      <Bx p={[7.2, 3.5, 0]} s={[0.4, 7.2, 12.4]} c={BRICK} />
+
+      {/* back window wall */}
+      <Bx p={[0, 3.5, -6.2]} s={[14.8, 7.2, 0.4]} c={STEEL} />
+
+      {/* front wall with door opening */}
+      <Bx p={[-4, 3.5, 6.2]} s={[6.8, 7.2, 0.4]} c={BRICK} />
+      <Bx p={[4, 3.5, 6.2]} s={[6.8, 7.2, 0.4]} c={BRICK} />
+      <Bx p={[0, 4.85, 6.2]} s={[1.3, 4.7, 0.4]} c={BRICK} />
+
+      {/* ceiling */}
+      <Bx p={[0, 7.15, 0]} s={[14.8, 0.2, 12.8]} c="#17181d" shadow={false} />
+
+      {/* mezzanine platform */}
+      <Bx p={[4.6, 3.2, -3]} s={[4.8, 0.25, 6]} c={WOOD_WARM} rough={0.7} />
+
+      {/* mezzanine railing */}
+      {Array.from({ length: 8 }, (_, i) => (
+        <Bx
+          key={`rz${i}`}
+          p={[2.25, 3.7, -5.7 + i * 0.78]}
+          s={[0.06, 0.85, 0.06]}
+          c={STEEL}
+          metal={0.6}
+          rough={0.4}
+        />
+      ))}
+      <Bx p={[2.25, 4.15, -3]} s={[0.08, 0.08, 6]} c={STEEL} metal={0.6} rough={0.4} />
+      {Array.from({ length: 6 }, (_, i) => (
+        <Bx
+          key={`rx${i}`}
+          p={[2.6 + i * 0.85, 3.7, -0.06]}
+          s={[0.06, 0.85, 0.06]}
+          c={STEEL}
+          metal={0.6}
+          rough={0.4}
+        />
+      ))}
+      <Bx p={[4.6, 4.15, -0.06]} s={[4.8, 0.08, 0.08]} c={STEEL} metal={0.6} rough={0.4} />
+
+      {/* support column */}
+      <Bx p={[2.25, 1.6, -0.05]} s={[0.2, 3.2, 0.2]} c={STEEL} metal={0.5} rough={0.5} />
+
+      {/* spiral staircase */}
+      <SpiralStairs />
+
+      {/* --- big furniture (solid) --- */}
+      {/* sofa facing TV (left wall) */}
+      <Bx p={[-3.3, 0.35, -3.2]} s={[1.0, 0.55, 2.3]} c="#3f5d4e" rough={0.95} />
+      <Bx p={[-2.85, 0.85, -3.2]} s={[0.28, 1.0, 2.3]} c="#365144" rough={0.95} />
+      <Bx p={[-3.3, 0.68, -1.95]} s={[1.0, 0.42, 0.26]} c="#365144" rough={0.95} />
+      <Bx p={[-3.3, 0.68, -4.45]} s={[1.0, 0.42, 0.26]} c="#365144" rough={0.95} />
+
+      {/* coffee table */}
+      <Bx p={[-4.7, 0.24, -3.2]} s={[0.8, 0.3, 1.5]} c={CHARCOAL} rough={0.6} />
+
+      {/* TV console */}
+      <Bx p={[-6.75, 0.35, -3.2]} s={[0.5, 0.7, 2.6]} c={CHARCOAL} rough={0.7} />
+
+      {/* kitchen counter along back wall */}
+      <Bx p={[-4.5, 0.5, -5.4]} s={[4.4, 1.0, 1.1]} c="#23262d" rough={0.7} />
+      <Bx p={[-4.5, 1.03, -5.4]} s={[4.55, 0.07, 1.2]} c={CREAM} rough={0.4} />
+
+      {/* bookshelf under mezzanine, against right wall */}
+      <Bx p={[6.72, 1.5, -4.2]} s={[0.55, 3.0, 2.7]} c="#4e3a29" rough={0.85} />
+
+      {/* vinyl stand + crate */}
+      <Bx p={[6.55, 0.45, 1.6]} s={[0.75, 0.9, 1.5]} c={CHARCOAL} rough={0.7} />
+      <Bx p={[6.5, 0.31, 2.95]} s={[0.62, 0.62, 0.72]} c={WOOD_WARM} rough={0.9} />
+
+      {/* desk against left wall */}
+      <Bx p={[-6.55, 0.4, 3.4]} s={[0.8, 0.8, 2.0]} c={WOOD_WARM} rough={0.8} />
+
+      {/* mezzanine bed */}
+      <Bx p={[5.2, 3.55, -4.6]} s={[2.2, 0.42, 1.9]} c="#3b3f4c" rough={0.95} />
+      <Bx p={[6.15, 3.95, -4.6]} s={[0.25, 0.9, 1.9]} c="#2e323d" rough={0.95} />
+
+      {/* mezzanine dresser */}
+      <Bx p={[2.9, 3.72, -5.55]} s={[1.3, 0.8, 0.5]} c={CHARCOAL} rough={0.7} />
+    </group>
+  );
+}
+
+function SpiralStairs() {
+  const steps = useMemo(() => {
+    const arr: { p: [number, number, number]; rotY: number }[] = [];
+    const cx = 3.35;
+    const cz = 1.75;
+    const n = 14;
+    const a0 = Math.PI * 0.9;
+    const da = -(Math.PI * 1.42) / n;
+    for (let i = 0; i < n; i++) {
+      const a = a0 + da * i;
+      arr.push({
+        p: [cx + Math.cos(a) * 0.68, 0.12 + i * 0.22, cz + Math.sin(a) * 0.68],
+        rotY: -a + Math.PI / 2,
+      });
+    }
+    return arr;
+  }, []);
+
+  return (
+    <group>
+      {/* center pole */}
+      <mesh position={[3.35, 1.7, 1.75]} castShadow>
+        <cylinderGeometry args={[0.07, 0.07, 3.4, 12]} />
+        <meshStandardMaterial color={STEEL} metalness={0.6} roughness={0.4} />
+      </mesh>
+      {steps.map((s, i) => (
+        <Bx
+          key={i}
+          p={s.p}
+          r={[0, s.rotY, 0]}
+          s={[1.15, 0.07, 0.4]}
+          c={WOOD_WARM}
+          rough={0.7}
+        />
+      ))}
+      {/* top landing bridging to mezzanine */}
+      <Bx p={[3.4, 3.26, 0.5]} s={[1.4, 0.12, 1.1]} c={WOOD_WARM} rough={0.7} />
+    </group>
+  );
+}
+
+/* ---------------- decorative (no colliders) ---------------- */
+
+const SPINE_COLORS = ["#b5543c", "#c9a24a", "#5f7d5a", "#4a6d8c", "#8c5a7a", "#c97b4a", "#7a8c93", "#a44a42"];
+
+function Decor() {
+  return (
+    <group>
+      {/* window panes + mullions on back wall */}
+      {Array.from({ length: 6 }, (_, col) =>
+        Array.from({ length: 3 }, (_, row) => (
+          <mesh
+            key={`pane-${col}-${row}`}
+            position={[-5.5 + col * 2.2, 1.65 + row * 2.05, -5.97]}
+          >
+            <planeGeometry args={[1.95, 1.85]} />
+            <meshStandardMaterial
+              color="#101a2e"
+              emissive="#182b52"
+              emissiveIntensity={0.55}
+              roughness={0.15}
+              metalness={0.4}
+            />
+          </mesh>
+        ))
+      )}
+
+      {/* ceiling beams */}
+      {[-4.2, -1.6, 1, 3.6].map((z) => (
+        <Bx key={z} p={[0, 6.55, z]} s={[14.4, 0.28, 0.32]} c={STEEL} metal={0.5} rough={0.5} shadow={false} />
+      ))}
+
+      {/* rugs */}
+      <mesh position={[-4.4, 0.02, -3.2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <circleGeometry args={[1.9, 32]} />
+        <meshStandardMaterial color="#8a4f3d" roughness={1} />
+      </mesh>
+      <mesh position={[0.4, 0.02, 2.2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <circleGeometry args={[1.5, 32]} />
+        <meshStandardMaterial color="#44506e" roughness={1} />
+      </mesh>
+
+      {/* TV: frame + screen */}
+      <Bx p={[-6.52, 1.85, -3.2]} s={[0.08, 1.42, 2.5]} c="#0a0b0e" rough={0.4} />
+      <mesh position={[-6.47, 1.85, -3.2]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[2.3, 1.25]} />
+        <meshStandardMaterial color="#0e1420" emissive="#1d2f42" emissiveIntensity={0.6} roughness={0.2} />
+      </mesh>
+
+      {/* bookshelf boards + spines */}
+      {[0.55, 1.35, 2.15, 2.9].map((y) => (
+        <Bx key={y} p={[6.6, y, -4.2]} s={[0.4, 0.05, 2.6]} c="#3c2c1f" rough={0.9} />
+      ))}
+      {[0.55, 1.35, 2.15].map((rowY, row) =>
+        Array.from({ length: 11 }, (_, i) => {
+          const h = 0.3 + ((i * 7 + row * 3) % 4) * 0.035;
+          return (
+            <Bx
+              key={`sp-${row}-${i}`}
+              p={[6.58, rowY + h / 2 + 0.03, -5.35 + i * 0.21]}
+              s={[0.24, h, 0.14]}
+              c={SPINE_COLORS[(i + row * 3) % SPINE_COLORS.length]}
+              rough={0.85}
+            />
+          );
+        })
+      )}
+
+      {/* desk decor: laptop */}
+      <Bx p={[-6.45, 0.83, 3.4]} s={[0.34, 0.025, 0.5]} c="#9aa0a8" metal={0.6} rough={0.4} />
+      <mesh position={[-6.62, 0.99, 3.4]} rotation={[0, Math.PI / 2, -0.35]}>
+        <boxGeometry args={[0.5, 0.34, 0.02]} />
+        <meshStandardMaterial color="#0f141c" emissive="#2b4a66" emissiveIntensity={1.1} roughness={0.3} />
+      </mesh>
+      {/* desk chair */}
+      <Bx p={[-5.6, 0.45, 3.4]} s={[0.5, 0.08, 0.5]} c={CHARCOAL} rough={0.6} />
+      <Bx p={[-5.6, 0.22, 3.4]} s={[0.08, 0.4, 0.08]} c={STEEL} metal={0.5} />
+      <Bx p={[-5.36, 0.8, 3.4]} s={[0.08, 0.65, 0.5]} c={CHARCOAL} rough={0.6} />
+
+      {/* kitchen stools */}
+      {[-3.3, -4.5, -5.7].map((x) => (
+        <group key={x}>
+          <mesh position={[x, 0.56, -4.55]} castShadow>
+            <cylinderGeometry args={[0.2, 0.22, 0.07, 14]} />
+            <meshStandardMaterial color={WOOD_WARM} roughness={0.8} />
+          </mesh>
+          <mesh position={[x, 0.27, -4.55]}>
+            <cylinderGeometry args={[0.04, 0.04, 0.52, 8]} />
+            <meshStandardMaterial color={STEEL} metalness={0.6} roughness={0.4} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* bed duvet + pillows */}
+      <Bx p={[4.9, 3.82, -4.6]} s={[1.5, 0.14, 1.7]} c="#5d7263" rough={1} />
+      <Bx p={[5.95, 3.85, -5.1]} s={[0.45, 0.14, 0.6]} c={CREAM} rough={1} />
+      <Bx p={[5.95, 3.85, -4.15]} s={[0.45, 0.14, 0.6]} c={CREAM} rough={1} />
+
+      {/* posters on right wall above bed (mezzanine) */}
+      <Poster p={[6.94, 4.9, -5.0]} base="#2f6e4f">
+        {/* futbol: white circle */}
+        <mesh position={[0, 0.06, 0.011]}>
+          <circleGeometry args={[0.2, 24]} />
+          <meshStandardMaterial color="#f2efe6" roughness={0.8} />
+        </mesh>
+        <mesh position={[0, 0.06, 0.012]}>
+          <circleGeometry args={[0.08, 5]} />
+          <meshStandardMaterial color="#1c1c1c" roughness={0.8} />
+        </mesh>
+      </Poster>
+      <Poster p={[6.94, 4.9, -3.7]} base="#1d1d22">
+        {/* piano keys */}
+        {Array.from({ length: 5 }, (_, i) => (
+          <mesh key={i} position={[-0.24 + i * 0.12, -0.18, 0.011]}>
+            <planeGeometry args={[0.1, 0.42]} />
+            <meshStandardMaterial color="#f2efe6" roughness={0.8} />
+          </mesh>
+        ))}
+        {[0, 1, 3].map((i) => (
+          <mesh key={i} position={[-0.18 + i * 0.12, -0.1, 0.012]}>
+            <planeGeometry args={[0.06, 0.26]} />
+            <meshStandardMaterial color="#111" roughness={0.8} />
+          </mesh>
+        ))}
+      </Poster>
+      <Poster p={[6.94, 4.9, -2.4]} base="#8f4032">
+        {/* barbell */}
+        <mesh position={[0, 0, 0.011]}>
+          <planeGeometry args={[0.5, 0.05]} />
+          <meshStandardMaterial color="#f2efe6" roughness={0.8} />
+        </mesh>
+        <mesh position={[-0.2, 0, 0.012]}>
+          <planeGeometry args={[0.07, 0.24]} />
+          <meshStandardMaterial color="#f2efe6" roughness={0.8} />
+        </mesh>
+        <mesh position={[0.2, 0, 0.012]}>
+          <planeGeometry args={[0.07, 0.24]} />
+          <meshStandardMaterial color="#f2efe6" roughness={0.8} />
+        </mesh>
+      </Poster>
+      <Poster p={[6.94, 4.9, -1.1]} base="#b26a2f">
+        {/* waveform */}
+        {Array.from({ length: 9 }, (_, i) => (
+          <mesh key={i} position={[-0.24 + i * 0.06, 0, 0.011]}>
+            <planeGeometry args={[0.035, 0.12 + Math.abs(Math.sin(i * 1.7)) * 0.34]} />
+            <meshStandardMaterial color="#f8e9d2" roughness={0.8} />
+          </mesh>
+        ))}
+      </Poster>
+
+      {/* plants */}
+      <Plant p={[-6.3, 0, 5.2]} />
+      <Plant p={[6.3, 0, 5.2]} />
+      <Plant p={[2.75, 3.33, -0.7]} small />
+
+      {/* floor lamps */}
+      <Lamp p={[-6.2, 0, -0.6]} />
+      <Lamp p={[5.9, 0, 4.9]} />
+
+      {/* pendant over living area */}
+      <mesh position={[-4.4, 4.5, -3.2]}>
+        <cylinderGeometry args={[0.01, 0.01, 5, 6]} />
+        <meshStandardMaterial color="#000" />
+      </mesh>
+      <mesh position={[-4.4, 2.15, -3.2]}>
+        <cylinderGeometry args={[0.3, 0.42, 0.3, 18, 1, true]} />
+        <meshStandardMaterial color={STEEL} metalness={0.6} roughness={0.4} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[-4.4, 2.05, -3.2]}>
+        <sphereGeometry args={[0.09, 10, 10]} />
+        <meshStandardMaterial color="#ffd9a0" emissive="#ffb45c" emissiveIntensity={2.4} />
+      </mesh>
+
+      {/* exterior: door mat, mailbox, wall lamp, planters */}
+      <Bx p={[0, 0.01, 7.0]} s={[1.5, 0.03, 0.85]} c="#5c4a3a" rough={1} />
+      <group position={[1.6, 0, 8.2]}>
+        <mesh position={[0, 0.5, 0]}>
+          <cylinderGeometry args={[0.035, 0.035, 1.0, 8]} />
+          <meshStandardMaterial color={STEEL} metalness={0.5} roughness={0.5} />
+        </mesh>
+        <Bx p={[0, 1.1, 0]} s={[0.3, 0.24, 0.44]} c="#a44a42" rough={0.6} />
+        <Bx p={[0.1, 1.3, 0]} s={[0.035, 0.14, 0.035]} c="#ddd" rough={0.4} />
+      </group>
+      <mesh position={[0, 3.05, 6.46]}>
+        <sphereGeometry args={[0.12, 12, 12]} />
+        <meshStandardMaterial color="#ffd9a0" emissive="#ffb45c" emissiveIntensity={2.6} />
+      </mesh>
+      <Bx p={[-1.7, 0.22, 7.15]} s={[0.6, 0.45, 0.6]} c="#41372c" rough={1} />
+      <mesh position={[-1.7, 0.7, 7.15]}>
+        <sphereGeometry args={[0.32, 10, 10]} />
+        <meshStandardMaterial color="#3f5d3a" roughness={1} />
+      </mesh>
+
+      {/* front facade windows (warm, inviting) */}
+      <mesh position={[-3.6, 2.3, 6.42]}>
+        <planeGeometry args={[2.0, 2.5]} />
+        <meshStandardMaterial color="#20160e" emissive="#ff9d45" emissiveIntensity={0.7} roughness={0.4} />
+      </mesh>
+      <mesh position={[3.6, 2.3, 6.42]}>
+        <planeGeometry args={[2.0, 2.5]} />
+        <meshStandardMaterial color="#20160e" emissive="#ff9d45" emissiveIntensity={0.7} roughness={0.4} />
+      </mesh>
+      {/* facade window mullions */}
+      {[-3.6, 3.6].map((x) => (
+        <group key={x}>
+          <Bx p={[x, 2.3, 6.44]} s={[2.1, 0.07, 0.05]} c={STEEL} shadow={false} />
+          <Bx p={[x, 2.3, 6.44]} s={[0.07, 2.6, 0.05]} c={STEEL} shadow={false} />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function Poster({
+  p,
+  base,
+  children,
+}: {
+  p: [number, number, number];
+  base: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <group position={p} rotation={[0, -Math.PI / 2, 0]}>
+      <mesh>
+        <planeGeometry args={[0.85, 1.15]} />
+        <meshStandardMaterial color={base} roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0, -0.005]}>
+        <planeGeometry args={[0.95, 1.25]} />
+        <meshStandardMaterial color="#14151a" roughness={0.8} />
+      </mesh>
+      {children}
+    </group>
+  );
+}
+
+function Plant({ p, small = false }: { p: [number, number, number]; small?: boolean }) {
+  const s = small ? 0.6 : 1;
+  return (
+    <group position={p} scale={s}>
+      <mesh position={[0, 0.28, 0]} castShadow>
+        <cylinderGeometry args={[0.24, 0.3, 0.55, 12]} />
+        <meshStandardMaterial color="#8a4f3d" roughness={1} />
+      </mesh>
+      <mesh position={[0, 0.85, 0]} castShadow>
+        <sphereGeometry args={[0.42, 10, 10]} />
+        <meshStandardMaterial color="#3f5d3a" roughness={1} />
+      </mesh>
+      <mesh position={[0.2, 1.15, 0.1]} castShadow>
+        <sphereGeometry args={[0.28, 10, 10]} />
+        <meshStandardMaterial color="#4a6d44" roughness={1} />
+      </mesh>
+    </group>
+  );
+}
+
+function Lamp({ p }: { p: [number, number, number] }) {
+  return (
+    <group position={p}>
+      <mesh position={[0, 1.05, 0]}>
+        <cylinderGeometry args={[0.03, 0.03, 2.1, 8]} />
+        <meshStandardMaterial color={STEEL} metalness={0.5} roughness={0.5} />
+      </mesh>
+      <mesh position={[0, 0.02, 0]}>
+        <cylinderGeometry args={[0.22, 0.26, 0.05, 14]} />
+        <meshStandardMaterial color={STEEL} metalness={0.5} roughness={0.5} />
+      </mesh>
+      <mesh position={[0, 2.18, 0]}>
+        <cylinderGeometry args={[0.16, 0.26, 0.34, 14, 1, true]} />
+        <meshStandardMaterial color="#d8c6a4" roughness={0.9} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, 2.12, 0]}>
+        <sphereGeometry args={[0.08, 10, 10]} />
+        <meshStandardMaterial color="#ffd9a0" emissive="#ffb45c" emissiveIntensity={2.2} />
+      </mesh>
+    </group>
+  );
+}
+
+/* ---------------- turntable (record spins while playing) ---------------- */
+
+function Turntable() {
+  const record = useRef<THREE.Group>(null);
+  const arm = useRef<THREE.Group>(null);
+
+  useFrame((_, delta) => {
+    const playing = !!useGame.getState().nowPlaying;
+    if (record.current && playing) record.current.rotation.y -= delta * 3.4;
+    if (arm.current) {
+      arm.current.rotation.y = THREE.MathUtils.lerp(
+        arm.current.rotation.y,
+        playing ? -0.55 : 0,
+        0.08
+      );
+    }
+  });
+
+  return (
+    <group position={[6.55, 0.9, 1.6]}>
+      {/* deck */}
+      <Bx p={[0, 0.05, 0]} s={[0.62, 0.1, 1.05]} c="#111318" rough={0.4} />
+      {/* platter + record */}
+      <group ref={record} position={[-0.02, 0.12, -0.18]}>
+        <mesh>
+          <cylinderGeometry args={[0.3, 0.3, 0.02, 28]} />
+          <meshStandardMaterial color="#0a0a0c" roughness={0.35} />
+        </mesh>
+        <mesh position={[0, 0.012, 0]}>
+          <cylinderGeometry args={[0.09, 0.09, 0.012, 20]} />
+          <meshStandardMaterial color="#c97b4a" roughness={0.6} />
+        </mesh>
+      </group>
+      {/* tonearm */}
+      <group ref={arm} position={[0.2, 0.16, 0.32]}>
+        <mesh position={[0, 0, -0.19]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.016, 0.016, 0.4, 8]} />
+          <meshStandardMaterial color="#c8ccd4" metalness={0.7} roughness={0.3} />
+        </mesh>
+        <mesh position={[0, 0, 0.02]}>
+          <cylinderGeometry args={[0.04, 0.04, 0.08, 10]} />
+          <meshStandardMaterial color="#c8ccd4" metalness={0.7} roughness={0.3} />
+        </mesh>
+      </group>
+      {/* leaning records in crate */}
+      {Array.from({ length: 4 }, (_, i) => (
+        <mesh
+          key={i}
+          position={[-0.06 + i * 0.05, -0.35, 1.32]}
+          rotation={[0, 0, 0.12 + i * 0.04]}
+        >
+          <boxGeometry args={[0.03, 0.5, 0.5]} />
+          <meshStandardMaterial color={SPINE_COLORS[i * 2]} roughness={0.7} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/* ---------------- animated front door ---------------- */
+
+function Door() {
+  const hinge = useRef<THREE.Group>(null);
+
+  useFrame(() => {
+    const open = useGame.getState().doorOpen;
+    if (hinge.current) {
+      hinge.current.rotation.y = THREE.MathUtils.lerp(
+        hinge.current.rotation.y,
+        open ? -1.9 : 0,
+        0.06
+      );
+    }
+  });
+
+  return (
+    <group>
+      {/* frame */}
+      <Bx p={[-0.62, 1.25, 6.2]} s={[0.12, 2.5, 0.46]} c="#171512" />
+      <Bx p={[0.62, 1.25, 6.2]} s={[0.12, 2.5, 0.46]} c="#171512" />
+      <Bx p={[0, 2.52, 6.2]} s={[1.36, 0.12, 0.46]} c="#171512" />
+      {/* hinged panel */}
+      <group ref={hinge} position={[-0.55, 0, 6.2]}>
+        <mesh position={[0.55, 1.25, 0]} castShadow>
+          <boxGeometry args={[1.1, 2.5, 0.1]} />
+          <meshStandardMaterial color={BRICK_DARK} roughness={0.7} />
+        </mesh>
+        <mesh position={[0.95, 1.25, 0.08]}>
+          <sphereGeometry args={[0.05, 10, 10]} />
+          <meshStandardMaterial color="#c9a24a" metalness={0.8} roughness={0.3} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+/* ---------------- boundaries ---------------- */
+
+function Barriers() {
+  return (
+    <group>
+      {/* stoop edges */}
+      <CuboidCollider args={[10, 2, 0.3]} position={[0, 1, 11.4]} />
+      <CuboidCollider args={[0.3, 2, 3]} position={[-10.1, 1, 8.6]} />
+      <CuboidCollider args={[0.3, 2, 3]} position={[10.1, 1, 8.6]} />
+    </group>
+  );
+}
+
+export default function Loft() {
+  return (
+    <group>
+      <RigidBody type="fixed" colliders="cuboid">
+        <Shell />
+      </RigidBody>
+      <Barriers />
+      <Decor />
+      <Turntable />
+      <Door />
+    </group>
+  );
+}
