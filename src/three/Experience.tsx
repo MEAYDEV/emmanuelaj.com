@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, lazy, Suspense } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { AdaptiveDpr, CameraControls, PerspectiveCamera, Stars } from "@react-three/drei";
 import { Physics } from "@react-three/rapier";
 import * as THREE from "three";
@@ -9,8 +9,14 @@ import Avatar from "./Avatar";
 import LibraryBooks from "./LibraryBooks";
 import VinylBrowser from "./VinylBrowser";
 import Atmosphere from "./Atmosphere";
-import { playerPosRef, playerSpeedRef, useGame } from "../store";
+import { playerPosRef, playerSpeedRef, playerYawRef, useGame } from "../store";
 import { INTERACTABLES } from "../data/content";
+
+/** Front door opening — assist framing while the avatar crosses this band. */
+const DOORWAY = { x: 1.35, zMin: 4.6, zMax: 7.8 } as const;
+const RECENTER_AFTER = 1.0;
+const CAMERA_PAD = 0.42;
+const MIN_CAM_DIST = 1.35;
 
 const Effects = lazy(() => import("./Effects"));
 
@@ -63,8 +69,23 @@ function InsideCameraRig() {
   const desiredTarget = useRef(new THREE.Vector3());
   const desiredPos = useRef(new THREE.Vector3());
   const followOffset = useRef(new THREE.Vector3(0, 1.1, 3.1));
+  const idealOffset = useRef(new THREE.Vector3());
+  const rayDir = useRef(new THREE.Vector3());
+  const raycaster = useRef(new THREE.Raycaster());
+  const moveTimer = useRef(0);
+  const userOrbiting = useRef(false);
+  const colliderRoots = useRef<THREE.Object3D[]>([]);
+  const scene = useThree((s) => s.scene);
   const phase = useGame((s) => s.phase);
   const focus = useGame((s) => s.focus);
+
+  useEffect(() => {
+    const roots: THREE.Object3D[] = [];
+    scene.traverse((obj) => {
+      if (obj.userData?.cameraCollide) roots.push(obj);
+    });
+    colliderRoots.current = roots;
+  }, [scene, phase]);
 
   useEffect(() => {
     const c = controls.current;
@@ -81,6 +102,8 @@ function InsideCameraRig() {
     const p = playerPosRef.current;
     c.enabled = true;
     c.smoothTime = entering ? 0.75 : 0.32;
+    followOffset.current.set(0, 1.1, 3.1);
+    moveTimer.current = 0;
     c.setLookAt(p.x, p.y + 1.8, p.z + 3.1, p.x, p.y + 0.82, p.z, true);
     const timer = setTimeout(() => {
       if (controls.current) controls.current.smoothTime = 0.2;
@@ -95,20 +118,79 @@ function InsideCameraRig() {
     if (!c) return;
 
     const p = playerPosRef.current;
+    const speed = playerSpeedRef.current;
+    const yaw = playerYawRef.current;
     c.getPosition(currentPos.current);
     c.getTarget(currentTarget.current);
 
+    // Preserve the current boom (including user orbit) and translate it with the player.
     followOffset.current.copy(currentPos.current).sub(currentTarget.current);
     if (followOffset.current.lengthSq() < 0.001) {
       followOffset.current.set(0, 1.1, 3.1);
     }
 
+    const inDoorway = Math.abs(p.x) < DOORWAY.x && p.z > DOORWAY.zMin && p.z < DOORWAY.zMax;
+
+    // Sustained movement → gradually re-seat the camera behind the avatar.
+    if (!userOrbiting.current && speed > 1.15) {
+      moveTimer.current += delta;
+    } else {
+      moveTimer.current = Math.max(0, moveTimer.current - delta * 1.6);
+    }
+
+    const horiz = Math.hypot(followOffset.current.x, followOffset.current.z);
+    const dist = THREE.MathUtils.clamp(horiz || 3.1, 2.2, 5.5);
+    const height = THREE.MathUtils.clamp(followOffset.current.y, 0.85, 2.2);
+
+    if (inDoorway && !userOrbiting.current) {
+      // Keep the lens on the stoop side of the threshold so walls don't swallow the view.
+      idealOffset.current.set(0, 1.45, 2.85);
+      followOffset.current.lerp(idealOffset.current, THREE.MathUtils.clamp(delta * 3.2, 0, 1));
+      c.smoothTime = 0.28;
+    } else if (!userOrbiting.current && moveTimer.current >= RECENTER_AFTER) {
+      // Behind avatar: opposite facing (+Z at yaw 0).
+      idealOffset.current.set(-Math.sin(yaw) * dist, height, -Math.cos(yaw) * dist);
+      const blend = THREE.MathUtils.clamp(delta * 2.4, 0, 1);
+      followOffset.current.lerp(idealOffset.current, blend);
+      c.smoothTime = 0.22;
+    } else if (!userOrbiting.current) {
+      c.smoothTime = 0.2;
+    }
+
     desiredTarget.current.set(p.x, p.y + 0.82, p.z);
-    const followStrength = THREE.MathUtils.clamp(delta * (playerSpeedRef.current > 1 ? 6.5 : 4.5), 0, 1);
+    if (inDoorway) {
+      // Bias look slightly into the loft so the frame leads the walk-in.
+      desiredTarget.current.z -= 0.35;
+    }
+    const followStrength = THREE.MathUtils.clamp(delta * (speed > 1 ? 6.5 : 4.5), 0, 1);
     currentTarget.current.lerp(desiredTarget.current, followStrength);
 
     desiredPos.current.copy(currentTarget.current).add(followOffset.current);
     desiredPos.current.y = Math.max(desiredPos.current.y, p.y + 1.25);
+
+    // Collision-aware pull-in: shorten the boom if loft geometry sits between avatar and lens.
+    rayDir.current.copy(desiredPos.current).sub(currentTarget.current);
+    const wantDist = rayDir.current.length();
+    if (wantDist > 0.001 && colliderRoots.current.length) {
+      rayDir.current.multiplyScalar(1 / wantDist);
+      raycaster.current.set(currentTarget.current, rayDir.current);
+      raycaster.current.far = wantDist;
+      const hits = raycaster.current.intersectObjects(colliderRoots.current, true);
+      for (const hit of hits) {
+        // Skip near-self hits (floor under feet, capsule-adjacent).
+        if (hit.distance < MIN_CAM_DIST) continue;
+        if (hit.face) {
+          const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+          // Ignore floors / upward faces so the boom doesn't dive into the ground.
+          if (n.y > 0.65) continue;
+        }
+        const safe = Math.max(MIN_CAM_DIST, hit.distance - CAMERA_PAD);
+        if (safe < wantDist) {
+          desiredPos.current.copy(currentTarget.current).addScaledVector(rayDir.current, safe);
+        }
+        break;
+      }
+    }
 
     c.setLookAt(
       desiredPos.current.x,
@@ -125,12 +207,19 @@ function InsideCameraRig() {
     <CameraControls
       ref={controls}
       makeDefault
-      minDistance={2.0}
+      minDistance={1.6}
       maxDistance={8.5}
       maxPolarAngle={Math.PI * 0.48}
       draggingSmoothTime={0.12}
       azimuthRotateSpeed={0.55}
       polarRotateSpeed={0.45}
+      onControlStart={() => {
+        userOrbiting.current = true;
+        moveTimer.current = 0;
+      }}
+      onControlEnd={() => {
+        userOrbiting.current = false;
+      }}
     />
   );
 }

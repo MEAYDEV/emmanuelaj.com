@@ -4,7 +4,7 @@ import type * as THREE from "three";
 import { Ecctrl, type EcctrlHandle } from "ecctrl";
 import { useJoystickStore } from "ecctrl/input";
 import Avatar from "./Avatar";
-import { playerPosRef, playerSpeedRef, useGame } from "../store";
+import { playerPosRef, playerSpeedRef, playerYawRef, useGame } from "../store";
 import { INTERACTABLES } from "../data/content";
 
 const KEYMAP: Record<string, "forward" | "backward" | "leftward" | "rightward" | "run" | "jump"> = {
@@ -85,6 +85,7 @@ export default function Player() {
       yaw.current += diff * 0.16;
       model.current.rotation.y = yaw.current;
     }
+    playerYawRef.current = yaw.current;
 
     if (import.meta.env.DEV) {
       (window as unknown as Record<string, unknown>).__playerDebug = {
