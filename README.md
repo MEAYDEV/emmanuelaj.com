@@ -4,6 +4,11 @@ Emmanuel Ajala's personal site, reimagined as a Sims-inspired 3D loft you can
 walk around in. Built with React Three Fiber, Rapier physics, and the ecctrl
 character controller. The previous 2D site is preserved as the "classic" site.
 
+Production traffic on `emmanuelaj.com` (and `www`) is routed to the live
+profile at [pypes.dev/emmanuel-ajala](https://www.pypes.dev/emmanuel-ajala).
+The loft still runs locally via `npm run dev`, and `/classic` stays available
+on the deployed domain.
+
 ## Structure
 
 - `src/` — the 3D experience (Vite + React + TypeScript)
