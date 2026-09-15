@@ -21,6 +21,8 @@ export interface NowPlaying {
 /** Mutable per-frame data, kept out of React state on purpose. */
 export const playerPosRef = { current: new THREE.Vector3(0, 1, 9.5) };
 export const playerSpeedRef = { current: 0 };
+/** Radians; model faces +Z at yaw 0. Used by the follow camera. */
+export const playerYawRef = { current: Math.PI };
 
 interface GameState {
   phase: Phase;

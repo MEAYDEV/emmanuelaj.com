@@ -58,7 +58,7 @@ function Shell() {
   const floorMap = useMemo(() => makeWoodFloorTexture(), []);
 
   return (
-    <group>
+    <group userData={{ cameraCollide: true }}>
       {/* floors — slight sheen picks up the environment reflections */}
       <Bx p={[0, -0.1, 0]} s={[14.4, 0.2, 12.4]} c={WOOD_FLOOR} rough={0.55} metal={0.06} map={floorMap} />
       <Bx p={[0, -0.11, 8.6]} s={[20, 0.2, 5.4]} c="#3a3d45" />
