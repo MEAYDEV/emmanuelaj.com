@@ -1,19 +1,8 @@
 {
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "https://www.pypes.dev/emmanuel-ajala",
-      "permanent": false
-    },
-    {
-      "source": "/((?!classic|admin|api|beats|assets).*)",
-      "destination": "https://www.pypes.dev/emmanuel-ajala",
-      "permanent": false
-    }
-  ],
   "rewrites": [
     { "source": "/classic", "destination": "/classic/index.html" },
-    { "source": "/admin", "destination": "/index.html" }
+    { "source": "/admin", "destination": "/index.html" },
+    { "source": "/_next/:path*", "destination": "https://www.pypes.dev/_next/:path*" }
   ],
   "headers": [
     {
